@@ -39,6 +39,7 @@
 		4C0293BF2AE1D4550093CCBA /* RealNetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0293AE2AE1D4550093CCBA /* RealNetworkService.swift */; };
 		4C0293C02AE1D4550093CCBA /* TestableNetworkRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0293AF2AE1D4550093CCBA /* TestableNetworkRequest.swift */; };
 		4C0293C22AE1D9AD0093CCBA /* XCTestCase+AnyCodableAsserts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0293C12AE1D9AD0093CCBA /* XCTestCase+AnyCodableAsserts.swift */; };
+		4C9CF7C82AE20A7300EB88D4 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9CF7C72AE20A7300EB88D4 /* XCTest.framework */; };
 		72EC4ED272DA96D1B2F44F4D /* Pods_UnitTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E05720B5778E784DC19DA9C /* Pods_UnitTests.framework */; };
 		D4ABABAE251A7D95008076BF /* AEPTestUtils.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D444995F2519506B0093B364 /* AEPTestUtils.framework */; };
 		E6CACBEEB618C1273B24F1AE /* Pods_AEPTestUtils.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34C185B9927DF9E0701D766B /* Pods_AEPTestUtils.framework */; };
@@ -96,6 +97,7 @@
 		4C0293AE2AE1D4550093CCBA /* RealNetworkService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RealNetworkService.swift; sourceTree = "<group>"; };
 		4C0293AF2AE1D4550093CCBA /* TestableNetworkRequest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestableNetworkRequest.swift; sourceTree = "<group>"; };
 		4C0293C12AE1D9AD0093CCBA /* XCTestCase+AnyCodableAsserts.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCTestCase+AnyCodableAsserts.swift"; sourceTree = "<group>"; };
+		4C9CF7C72AE20A7300EB88D4 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		D444995F2519506B0093B364 /* AEPTestUtils.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AEPTestUtils.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4967534251130D3001F5F95 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D4ABABDA251A8142008076BF /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
@@ -111,6 +113,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4C9CF7C82AE20A7300EB88D4 /* XCTest.framework in Frameworks */,
 				E6CACBEEB618C1273B24F1AE /* Pods_AEPTestUtils.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -130,6 +133,7 @@
 		3BB2159D8E84140309C411FF /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				4C9CF7C72AE20A7300EB88D4 /* XCTest.framework */,
 				D4ABABDA251A8142008076BF /* UIKit.framework */,
 				1E05720B5778E784DC19DA9C /* Pods_UnitTests.framework */,
 				34C185B9927DF9E0701D766B /* Pods_AEPTestUtils.framework */,
