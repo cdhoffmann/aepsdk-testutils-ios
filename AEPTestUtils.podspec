@@ -18,4 +18,5 @@ Pod::Spec.new do |s|
   s.dependency 'AEPCore', '>= 4.0.0'
 
   s.source_files = 'Sources/**/*.swift'
+  s.frameworks   = 'XCTest'
 end
