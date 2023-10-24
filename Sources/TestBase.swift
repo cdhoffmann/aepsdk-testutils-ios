@@ -11,13 +11,12 @@
 //
 
 @testable import AEPCore
-//@testable import AEPEdge
 import AEPServices
 import Foundation
 import XCTest
 
 /// Struct defining the event specifications - contains the event type and source
-struct EventSpec {
+public struct EventSpec {
     let type: String
     let source: String
 }
@@ -25,24 +24,24 @@ struct EventSpec {
 /// Hashable `EventSpec`, to be used as key in Dictionaries
 extension EventSpec: Hashable & Equatable {
 
-    static func == (lhs: EventSpec, rhs: EventSpec) -> Bool {
+    public static func == (lhs: EventSpec, rhs: EventSpec) -> Bool {
         return lhs.source.lowercased() == rhs.source.lowercased() && lhs.type.lowercased() == rhs.type.lowercased()
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(type)
         hasher.combine(source)
     }
 }
 
-class TestBase: XCTestCase {
+open class TestBase: XCTestCase {
     /// Use this property to execute code logic in the first run in this test class; this value changes to False after the parent tearDown is executed
-    private(set) static var isFirstRun: Bool = true
+    public private(set) static var isFirstRun: Bool = true
     /// Use this setting to enable debug mode logging in the `TestBase`
-    static var debugEnabled = false
+    public static var debugEnabled = false
 
     // Runs once per test suite
-    public class override func setUp() {
+    open class override func setUp() {
         super.setUp()
         UserDefaults.clearAll()
         FileManager.default.clearCache()
@@ -50,13 +49,13 @@ class TestBase: XCTestCase {
     }
 
     // Runs before each test case
-    public override func setUp() {
+    open override func setUp() {
         super.setUp()
         continueAfterFailure = false
         MobileCore.registerExtension(InstrumentedExtension.self)
     }
 
-    public override func tearDown() {
+    open override func tearDown() {
         super.tearDown()
         // Wait .2 seconds in case there are unexpected events that were in the dispatch process during cleanup
         usleep(200000)
@@ -68,13 +67,13 @@ class TestBase: XCTestCase {
     }
 
     /// Reset event expectations and drop the items received until this point
-    func resetTestExpectations() {
+    open func resetTestExpectations() {
         log("Resetting test expectations for events")
         InstrumentedExtension.reset()
     }
 
     /// Unregisters the `InstrumentedExtension` from the Event Hub. This method executes asynchronous.
-    func unregisterInstrumentedExtension() {
+    open func unregisterInstrumentedExtension() {
         let event = Event(name: "Unregister Instrumented Extension",
                           type: TestConstants.EventType.INSTRUMENTED_EXTENSION,
                           source: TestConstants.EventSource.UNREGISTER_EXTENSION,
@@ -92,7 +91,7 @@ class TestBase: XCTestCase {
     ///   - count: the number of times this event should be dispatched, but default it is set to 1
     /// - See also:
     ///   - assertExpectedEvents(ignoreUnexpectedEvents:)
-    func setExpectationEvent(type: String, source: String, expectedCount: Int32 = 1) {
+    open func setExpectationEvent(type: String, source: String, expectedCount: Int32 = 1) {
         guard expectedCount > 0 else {
             assertionFailure("Expected event count should be greater than 0")
             return
@@ -111,7 +110,7 @@ class TestBase: XCTestCase {
     /// - See also:
     ///   - setExpectationEvent(type: source: count:)
     ///   - assertUnexpectedEvents()
-    func assertExpectedEvents(ignoreUnexpectedEvents: Bool = false, timeout: TimeInterval = TestConstants.Defaults.WAIT_EVENT_TIMEOUT, file: StaticString = #file, line: UInt = #line) {
+    open func assertExpectedEvents(ignoreUnexpectedEvents: Bool = false, timeout: TimeInterval = TestConstants.Defaults.WAIT_EVENT_TIMEOUT, file: StaticString = #file, line: UInt = #line) {
         guard InstrumentedExtension.expectedEvents.count > 0 else { // swiftlint:disable:this empty_count
             assertionFailure("There are no event expectations set, use this API after calling setExpectationEvent", file: file, line: line)
             return
@@ -132,7 +131,7 @@ class TestBase: XCTestCase {
 
     /// Asserts if any unexpected event was received. Use this method to verify the received events are correct when setting event expectations.
     /// - See also: setExpectationEvent(type: source: count:)
-    func assertUnexpectedEvents(file: StaticString = #file, line: UInt = #line) {
+    open func assertUnexpectedEvents(file: StaticString = #file, line: UInt = #line) {
         wait()
         var unexpectedEventsReceivedCount = 0
         var unexpectedEventsAsString = ""
@@ -161,7 +160,7 @@ class TestBase: XCTestCase {
     /// To be revisited once AMSDK-10169 is implemented
     /// - Parameters:
     ///   - timeout:how long should this method wait, in seconds; by default it waits up to 1 second
-    func wait(_ timeout: UInt32? = TestConstants.Defaults.WAIT_TIMEOUT) {
+    open func wait(_ timeout: UInt32? = TestConstants.Defaults.WAIT_TIMEOUT) {
         if let timeout = timeout {
             sleep(timeout)
         }
@@ -174,7 +173,7 @@ class TestBase: XCTestCase {
     ///   - source: the event source as in the expectation
     ///   - timeout: how long should this method wait for the expected event, in seconds; by default it waits up to 1 second
     /// - Returns: list of events with the provided `type` and `source`, or empty if none was dispatched
-    func getDispatchedEventsWith(type: String, source: String, timeout: TimeInterval = TestConstants.Defaults.WAIT_EVENT_TIMEOUT, file: StaticString = #file, line: UInt = #line) -> [Event] {
+    open func getDispatchedEventsWith(type: String, source: String, timeout: TimeInterval = TestConstants.Defaults.WAIT_EVENT_TIMEOUT, file: StaticString = #file, line: UInt = #line) -> [Event] {
         if InstrumentedExtension.expectedEvents[EventSpec(type: type, source: source)] != nil {
             let waitResult = InstrumentedExtension.expectedEvents[EventSpec(type: type, source: source)]?.await(timeout: timeout)
             XCTAssertFalse(waitResult == DispatchTimeoutResult.timedOut, "Timed out waiting for event type \(type) and source \(source)", file: file, line: line)
@@ -188,7 +187,7 @@ class TestBase: XCTestCase {
     /// - Parameter ownerExtension: the owner extension of the shared state (typically the name of the extension)
     /// - Parameter timeout: how long should this method wait for the requested shared state, in seconds; by default it waits up to 3 second
     /// - Returns: latest shared state of the given `stateOwner` or nil if no shared state was found
-    func getSharedStateFor(_ ownerExtension: String, timeout: TimeInterval = TestConstants.Defaults.WAIT_SHARED_STATE_TIMEOUT) -> [AnyHashable: Any]? {
+    open func getSharedStateFor(_ ownerExtension: String, timeout: TimeInterval = TestConstants.Defaults.WAIT_SHARED_STATE_TIMEOUT) -> [AnyHashable: Any]? {
         log("GetSharedState for \(ownerExtension)")
         let event = Event(name: "Get Shared State",
                           type: TestConstants.EventType.INSTRUMENTED_EXTENSION,
@@ -212,14 +211,14 @@ class TestBase: XCTestCase {
 
     /// Print message to console if `TestBase.debug` is true
     /// - Parameter message: message to log to console
-    func log(_ message: String) {
+    open func log(_ message: String) {
         TestBase.log(message)
 
     }
 
     /// Print message to console if `TestBase.debug` is true
     /// - Parameter message: message to log to console
-    static func log(_ message: String) {
+    public static func log(_ message: String) {
         guard !message.isEmpty && TestBase.debugEnabled else { return }
         print("TestBase - \(message)")
     }
