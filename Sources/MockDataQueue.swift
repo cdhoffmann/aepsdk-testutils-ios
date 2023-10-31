@@ -14,26 +14,26 @@
 import Foundation
 
 /// MockDataQueue - see also AEPServices/Mocks
-public class MockDataQueue: DataQueue {
+open class MockDataQueue: DataQueue {
     // swiftlint:disable identifier_name
-    let queue = ThreadSafeArray<DataEntity>()
+    public let queue = ThreadSafeArray<DataEntity>()
 
     public init() {}
 
-    public func add(dataEntity: DataEntity) -> Bool {
+    open func add(dataEntity: DataEntity) -> Bool {
         queue.append(dataEntity)
         return true
     }
 
-    public func peek() -> DataEntity? {
+    open func peek() -> DataEntity? {
         return queue.shallowCopy.first
     }
 
-    public func peek(n: Int) -> [DataEntity]? {
+    open func peek(n: Int) -> [DataEntity]? {
         return Array(queue.shallowCopy[0..<n])
     }
 
-    public func remove(n: Int) -> Bool {
+    open func remove(n: Int) -> Bool {
         guard let results = peek(n: n) else { return true }
         for result in results {
             _ = queue.filterRemove { $0.uniqueIdentifier == result.uniqueIdentifier }
@@ -41,21 +41,21 @@ public class MockDataQueue: DataQueue {
         return true
     }
 
-    public func remove() -> Bool {
+    open func remove() -> Bool {
         guard let first = peek() else { return true }
         _ = queue.filterRemove { $0.uniqueIdentifier == first.uniqueIdentifier }
         return true
     }
 
-    public func clear() -> Bool {
+    open func clear() -> Bool {
         queue.clear()
         return true
     }
 
-    public func count() -> Int {
+    open func count() -> Int {
         return queue.count
     }
 
-    public func close() {
+    open func close() {
     }
 }

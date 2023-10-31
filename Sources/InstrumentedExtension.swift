@@ -15,36 +15,36 @@ import AEPServices
 import XCTest
 
 /// Instrumented extension that registers a wildcard listener for intercepting events in current session. Use it along with `TestBase`
-class InstrumentedExtension: NSObject, Extension {
-    private static let logTag = "InstrumentedExtension"
-    var name = "com.adobe.InstrumentedExtension"
-    var friendlyName = "InstrumentedExtension"
-    static var extensionVersion = "1.0.0"
-    var metadata: [String: String]?
-    var runtime: ExtensionRuntime
+open class InstrumentedExtension: NSObject, Extension {
+    public static let logTag = "InstrumentedExtension"
+    public var name = "com.adobe.InstrumentedExtension"
+    public var friendlyName = "InstrumentedExtension"
+    public static var extensionVersion = "1.0.0"
+    public var metadata: [String: String]?
+    public var runtime: ExtensionRuntime
 
     // Expected events Dictionary - key: EventSpec, value: the expected count
-    static var expectedEvents = ThreadSafeDictionary<EventSpec, CountDownLatch>()
+    public static var expectedEvents = ThreadSafeDictionary<EventSpec, CountDownLatch>()
 
     // All the events seen by this listener that are not of type instrumentedExtension - key: EventSpec, value: received events with EventSpec type and source
-    static var receivedEvents = ThreadSafeDictionary<EventSpec, [Event]>()
+    public static var receivedEvents = ThreadSafeDictionary<EventSpec, [Event]>()
 
-    func onRegistered() {
+    open func onRegistered() {
         runtime.registerListener(type: EventType.wildcard, source: EventSource.wildcard, listener: wildcardListenerProcessor)
     }
 
-    func onUnregistered() {}
+    open func onUnregistered() {}
 
-    public func readyForEvent(_ event: Event) -> Bool {
+    open func readyForEvent(_ event: Event) -> Bool {
         return true
     }
 
-    required init?(runtime: ExtensionRuntime) {
+    required public init?(runtime: ExtensionRuntime) {
         self.runtime = runtime
     }
 
     // MARK: Event Processors
-    func wildcardListenerProcessor(_ event: Event) {
+    open func wildcardListenerProcessor(_ event: Event) {
         if event.type.lowercased() == TestConstants.EventType.INSTRUMENTED_EXTENSION.lowercased() {
             // process the shared state request event
             if event.source.lowercased() == TestConstants.EventSource.SHARED_STATE_REQUEST.lowercased() {
@@ -79,7 +79,7 @@ class InstrumentedExtension: NSObject, Extension {
 
     /// Process `getSharedStateFor` requests
     /// - Parameter event: event sent from `getSharedStateFor` which specifies the shared state `stateowner` to retrieve
-    func processSharedStateRequest(_ event: Event) {
+    open func processSharedStateRequest(_ event: Event) {
         guard let eventData = event.data, !eventData.isEmpty  else { return }
         guard let owner = eventData[TestConstants.EventDataKey.STATE_OWNER] as? String else { return }
 
@@ -99,12 +99,12 @@ class InstrumentedExtension: NSObject, Extension {
         MobileCore.dispatch(event: responseEvent)
     }
 
-    func unregisterExtension() {
+    open func unregisterExtension() {
         Log.debug(label: InstrumentedExtension.logTag, "Unregistering the Instrumented extension from the Event Hub")
         runtime.unregisterExtension()
     }
 
-    static func reset() {
+    public static func reset() {
         receivedEvents = ThreadSafeDictionary<EventSpec, [Event]>()
         expectedEvents = ThreadSafeDictionary<EventSpec, CountDownLatch>()
     }

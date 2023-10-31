@@ -14,7 +14,7 @@ import Foundation
 
 /// Flatten a multi-level dictionary to a single level where each key is a dotted notation of each nested key.
 /// - Parameter dict: the dictionary to flatten
-func flattenDictionary(dict: [String: Any]) -> [String: Any] {
+public func flattenDictionary(dict: [String: Any]) -> [String: Any] {
     var result: [String: Any] = [:]
 
     func recursive(dict: [String: Any], out: inout [String: Any], currentKey: String = "") {
@@ -58,7 +58,7 @@ func flattenDictionary(dict: [String: Any]) -> [String: Any] {
 
 /// Convert an timestamp as Date to an iso 8601 formatted date string.
 /// - Parameter timestamp
-func timestampToISO8601(_ timestamp: Date) -> String {
+public func timestampToISO8601(_ timestamp: Date) -> String {
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: "en_US_POSIX")
     formatter.timeZone = TimeZone(secondsFromGMT: 0)
@@ -69,7 +69,7 @@ func timestampToISO8601(_ timestamp: Date) -> String {
 /// Attempts to convert provided data to [String: Any] using JSONSerialization.
 /// - Parameter data: data to be converted to [String: Any]
 /// - Returns: `data` as [String: Any] or empty if an error occured
-func asFlattenDictionary(data: Data?) -> [String: Any] {
+public func asFlattenDictionary(data: Data?) -> [String: Any] {
     guard let unwrappedData = data else {
         return [:]
     }
