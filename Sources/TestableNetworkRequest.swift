@@ -62,8 +62,8 @@ open class TestableNetworkRequest: Hashable {
     ///
     /// - Parameter object: The object to be compared with the current instance.
     /// - Returns: A boolean value indicating whether the given object is equal to the current instance.
-    open func isEqual(_ other: Any?) -> Bool {
-        guard let otherNetworkRequest = other as? NetworkRequest else {
+    open func isEqual(_ object: Any?) -> Bool {
+        guard let otherNetworkRequest = object as? NetworkRequest else {
             return false
         }
         // Custom logic to compare network requests.
