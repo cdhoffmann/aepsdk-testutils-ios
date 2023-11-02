@@ -322,12 +322,12 @@ extension XCTestCase {
         shouldAssert: Bool = true,
         file: StaticString = #file,
         line: UInt = #line) -> Bool {
-            if expected?.value == nil {
-                return true
-            }
-            guard let expected = expected, let actual = actual else {
-                if shouldAssert {
-                    XCTFail(#"""
+        if expected?.value == nil {
+            return true
+        }
+        guard let expected = expected, let actual = actual else {
+            if shouldAssert {
+                XCTFail(#"""
                     Expected JSON is non-nil but Actual JSON is nil.
 
                     Expected: \#(String(describing: expected))
@@ -336,70 +336,70 @@ extension XCTestCase {
 
                     Key path: \#(keyPathAsString(keyPath))
                 """#, file: file, line: line)
-                }
-                return false
             }
+            return false
+        }
 
-            switch (expected, actual) {
-            case let (expected, actual) where (expected.value is String && actual.value is String):
-                fallthrough
-            case let (expected, actual) where (expected.value is Bool && actual.value is Bool):
-                fallthrough
-            case let (expected, actual) where (expected.value is Int && actual.value is Int):
-                fallthrough
-            case let (expected, actual) where (expected.value is Double && actual.value is Double):
-                if exactMatchMode {
-                    if shouldAssert {
-                        XCTAssertEqual(expected, actual, "Key path: \(keyPathAsString(keyPath))", file: file, line: line)
-                    }
-                    return expected == actual
-                } else {
-                    // Value type matching already passed by virtue of passing the where condition in the switch case
-                    return true
-                }
-            case let (expected, actual) where (expected.value is [String: AnyCodable] && actual.value is [String: AnyCodable]):
-                return assertFlexibleEqual(
-                    expected: expected.value as? [String: AnyCodable],
-                    actual: actual.value as? [String: AnyCodable],
-                    keyPath: keyPath,
-                    pathTree: pathTree,
-                    exactMatchMode: exactMatchMode,
-                    shouldAssert: shouldAssert,
-                    file: file,
-                    line: line)
-            case let (expected, actual) where (expected.value is [AnyCodable] && actual.value is [AnyCodable]):
-                return assertFlexibleEqual(
-                    expected: expected.value as? [AnyCodable],
-                    actual: actual.value as? [AnyCodable],
-                    keyPath: keyPath,
-                    pathTree: pathTree,
-                    exactMatchMode: exactMatchMode,
-                    shouldAssert: shouldAssert,
-                    file: file,
-                    line: line)
-            case let (expected, actual) where (expected.value is [Any?] && actual.value is [Any?]):
-                return assertFlexibleEqual(
-                    expected: AnyCodable.from(array: expected.value as? [Any?]),
-                    actual: AnyCodable.from(array: actual.value as? [Any?]),
-                    keyPath: keyPath,
-                    pathTree: pathTree,
-                    exactMatchMode: exactMatchMode,
-                    shouldAssert: shouldAssert,
-                    file: file,
-                    line: line)
-            case let (expected, actual) where (expected.value is [String: Any?] && actual.value is [String: Any?]):
-                return assertFlexibleEqual(
-                    expected: AnyCodable.from(dictionary: expected.value as? [String: Any?]),
-                    actual: AnyCodable.from(dictionary: actual.value as? [String: Any?]),
-                    keyPath: keyPath,
-                    pathTree: pathTree,
-                    exactMatchMode: exactMatchMode,
-                    shouldAssert: shouldAssert,
-                    file: file,
-                    line: line)
-            default:
+        switch (expected, actual) {
+        case let (expected, actual) where (expected.value is String && actual.value is String):
+            fallthrough
+        case let (expected, actual) where (expected.value is Bool && actual.value is Bool):
+            fallthrough
+        case let (expected, actual) where (expected.value is Int && actual.value is Int):
+            fallthrough
+        case let (expected, actual) where (expected.value is Double && actual.value is Double):
+            if exactMatchMode {
                 if shouldAssert {
-                    XCTFail(#"""
+                    XCTAssertEqual(expected, actual, "Key path: \(keyPathAsString(keyPath))", file: file, line: line)
+                }
+                return expected == actual
+            } else {
+                // Value type matching already passed by virtue of passing the where condition in the switch case
+                return true
+            }
+        case let (expected, actual) where (expected.value is [String: AnyCodable] && actual.value is [String: AnyCodable]):
+            return assertFlexibleEqual(
+                expected: expected.value as? [String: AnyCodable],
+                actual: actual.value as? [String: AnyCodable],
+                keyPath: keyPath,
+                pathTree: pathTree,
+                exactMatchMode: exactMatchMode,
+                shouldAssert: shouldAssert,
+                file: file,
+                line: line)
+        case let (expected, actual) where (expected.value is [AnyCodable] && actual.value is [AnyCodable]):
+            return assertFlexibleEqual(
+                expected: expected.value as? [AnyCodable],
+                actual: actual.value as? [AnyCodable],
+                keyPath: keyPath,
+                pathTree: pathTree,
+                exactMatchMode: exactMatchMode,
+                shouldAssert: shouldAssert,
+                file: file,
+                line: line)
+        case let (expected, actual) where (expected.value is [Any?] && actual.value is [Any?]):
+            return assertFlexibleEqual(
+                expected: AnyCodable.from(array: expected.value as? [Any?]),
+                actual: AnyCodable.from(array: actual.value as? [Any?]),
+                keyPath: keyPath,
+                pathTree: pathTree,
+                exactMatchMode: exactMatchMode,
+                shouldAssert: shouldAssert,
+                file: file,
+                line: line)
+        case let (expected, actual) where (expected.value is [String: Any?] && actual.value is [String: Any?]):
+            return assertFlexibleEqual(
+                expected: AnyCodable.from(dictionary: expected.value as? [String: Any?]),
+                actual: AnyCodable.from(dictionary: actual.value as? [String: Any?]),
+                keyPath: keyPath,
+                pathTree: pathTree,
+                exactMatchMode: exactMatchMode,
+                shouldAssert: shouldAssert,
+                file: file,
+                line: line)
+        default:
+            if shouldAssert {
+                XCTFail(#"""
                     Expected and Actual types do not match.
 
                     Expected: \#(expected)
@@ -408,10 +408,10 @@ extension XCTestCase {
 
                     Key path: \#(keyPathAsString(keyPath))
                 """#, file: file, line: line)
-                }
-                return false
             }
+            return false
         }
+    }
 
     /// Performs a flexible comparison between the given `expected` and `actual` arrays of `AnyCodable`, optionally using exact match
     /// or value type match modes. In case of a mismatch and if `shouldAssert` is `true`, a test failure occurs.
@@ -438,12 +438,12 @@ extension XCTestCase {
         shouldAssert: Bool = true,
         file: StaticString = #file,
         line: UInt = #line) -> Bool {
-            if expected == nil {
-                return true
-            }
-            guard let expected = expected, let actual = actual else {
-                if shouldAssert {
-                    XCTFail(#"""
+        if expected == nil {
+            return true
+        }
+        guard let expected = expected, let actual = actual else {
+            if shouldAssert {
+                XCTFail(#"""
                     Expected JSON is non-nil but Actual JSON is nil.
 
                     Expected: \#(String(describing: expected))
@@ -452,12 +452,12 @@ extension XCTestCase {
 
                     Key path: \#(keyPathAsString(keyPath))
                 """#, file: file, line: line)
-                }
-                return false
             }
-            if expected.count > actual.count {
-                if shouldAssert {
-                    XCTFail(#"""
+            return false
+        }
+        if expected.count > actual.count {
+            if shouldAssert {
+                XCTFail(#"""
                     Expected JSON has more elements than Actual JSON. Impossible for Actual to fulfill Expected requirements.
 
                     Expected count: \#(expected.count)
@@ -469,68 +469,68 @@ extension XCTestCase {
 
                     Key path: \#(keyPathAsString(keyPath))
                 """#, file: file, line: line)
-                }
-                return false
             }
-            var actualIndexes = Set(0..<actual.count)
-            var expectedIndexes = Set(0..<expected.count)
-            var wildcardIndexes: Set<Int>
+            return false
+        }
+        var actualIndexes = Set(0..<actual.count)
+        var expectedIndexes = Set(0..<expected.count)
+        var wildcardIndexes: Set<Int>
 
-            // Collect all the keys from `pathTree` that either:
-            // 1. Mark the path end (where the value is a `String`), or
-            // 2. Contain the asterisk (*) character.
-            let pathEndKeys = pathTree?.filter { key, value in
-                value is String || key.contains("*")
-            }.keys.map({$0}) ?? []
+        // Collect all the keys from `pathTree` that either:
+        // 1. Mark the path end (where the value is a `String`), or
+        // 2. Contain the asterisk (*) character.
+        let pathEndKeys = pathTree?.filter { key, value in
+            value is String || key.contains("*")
+        }.keys.map({$0}) ?? []
 
-            // If general wildcard is present, it supersedes other paths
-            if pathEndKeys.contains("[*]") {
-                wildcardIndexes = Set(0..<expected.count)
-                expectedIndexes.removeAll()
-            } else {
-                let validWildcards = extractValidWildcardIndexes(pathEndKeys: pathEndKeys, file: file, line: line)
-                // Discard wildcard indexes that are out of bounds of the available expected indexes
-                let inBoundWildcards = expectedIndexes.intersection(validWildcards)
-                wildcardIndexes = inBoundWildcards
-                // Remove all wildcard indexes from the valid expected indexes, so assertions are not performed twice
-                expectedIndexes.subtract(wildcardIndexes)
-            }
+        // If general wildcard is present, it supersedes other paths
+        if pathEndKeys.contains("[*]") {
+            wildcardIndexes = Set(0..<expected.count)
+            expectedIndexes.removeAll()
+        } else {
+            let validWildcards = extractValidWildcardIndexes(pathEndKeys: pathEndKeys, file: file, line: line)
+            // Discard wildcard indexes that are out of bounds of the available expected indexes
+            let inBoundWildcards = expectedIndexes.intersection(validWildcards)
+            wildcardIndexes = inBoundWildcards
+            // Remove all wildcard indexes from the valid expected indexes, so assertions are not performed twice
+            expectedIndexes.subtract(wildcardIndexes)
+        }
 
-            var finalResult = true
+        var finalResult = true
 
-            for index in expectedIndexes {
-                let pathTreeValue = pathTree?["[\(index)]"]
-                let isPathEnd = pathTreeValue is String
+        for index in expectedIndexes {
+            let pathTreeValue = pathTree?["[\(index)]"]
+            let isPathEnd = pathTreeValue is String
 
-                finalResult = assertFlexibleEqual(
-                    expected: expected[index],
-                    actual: actual[index],
-                    keyPath: keyPath + [index],
-                    pathTree: pathTreeValue as? [String: Any],
-                    exactMatchMode: isPathEnd != exactMatchMode,
-                    shouldAssert: shouldAssert,
-                    file: file, line: line) && finalResult
-                actualIndexes.remove(index)
-            }
+            finalResult = assertFlexibleEqual(
+                expected: expected[index],
+                actual: actual[index],
+                keyPath: keyPath + [index],
+                pathTree: pathTreeValue as? [String: Any],
+                exactMatchMode: isPathEnd != exactMatchMode,
+                shouldAssert: shouldAssert,
+                file: file, line: line) && finalResult
+            actualIndexes.remove(index)
+        }
 
-            for index in wildcardIndexes {
-                let pathTreeValue = pathTree?["[*]"]
+        for index in wildcardIndexes {
+            let pathTreeValue = pathTree?["[*]"]
                 ?? pathTree?["[*\(index)]"]
                 ?? pathTree?["[\(index)*]"]
 
-                let isPathEnd = pathTreeValue is String
+            let isPathEnd = pathTreeValue is String
 
-                guard let actualIndex = actualIndexes.first(where: {
-                    assertFlexibleEqual(
-                        expected: expected[index],
-                        actual: actual[$0],
-                        keyPath: keyPath + [index],
-                        pathTree: pathTreeValue as? [String: Any],
-                        exactMatchMode: isPathEnd != exactMatchMode,
-                        shouldAssert: false)
-                }) else {
-                    if shouldAssert {
-                        XCTFail(#"""
+            guard let actualIndex = actualIndexes.first(where: {
+                assertFlexibleEqual(
+                    expected: expected[index],
+                    actual: actual[$0],
+                    keyPath: keyPath + [index],
+                    pathTree: pathTreeValue as? [String: Any],
+                    exactMatchMode: isPathEnd != exactMatchMode,
+                    shouldAssert: false)
+            }) else {
+                if shouldAssert {
+                    XCTFail(#"""
                         Wildcard \#((isPathEnd ? !exactMatchMode : exactMatchMode) ? "exact" : "type") match found no matches on Actual side satisfying the Expected requirement.
 
                         Requirement: \#(String(describing: pathTreeValue))
@@ -541,14 +541,14 @@ extension XCTestCase {
 
                         Key path: \#(keyPathAsString(keyPath))
                         """#, file: file, line: line)
-                    }
-                    finalResult = false
-                    break
                 }
-                actualIndexes.remove(actualIndex)
+                finalResult = false
+                break
             }
-            return finalResult
+            actualIndexes.remove(actualIndex)
         }
+        return finalResult
+    }
 
     /// Performs a flexible comparison between the given `expected` and `actual` dictionaries, optionally using exact match
     /// or value type match modes. In case of a mismatch and if `shouldAssert` is `true`, a test failure occurs.
@@ -575,12 +575,12 @@ extension XCTestCase {
         shouldAssert: Bool = true,
         file: StaticString = #file,
         line: UInt = #line) -> Bool {
-            if expected == nil {
-                return true
-            }
-            guard let expected = expected, let actual = actual else {
-                if shouldAssert {
-                    XCTFail(#"""
+        if expected == nil {
+            return true
+        }
+        guard let expected = expected, let actual = actual else {
+            if shouldAssert {
+                XCTFail(#"""
                     Expected JSON is non-nil but Actual JSON is nil.
 
                     Expected: \#(String(describing: expected))
@@ -589,12 +589,12 @@ extension XCTestCase {
 
                     Key path: \#(keyPathAsString(keyPath))
                 """#, file: file, line: line)
-                }
-                return false
             }
-            if expected.count > actual.count {
-                if shouldAssert {
-                    XCTFail(#"""
+            return false
+        }
+        if expected.count > actual.count {
+            if shouldAssert {
+                XCTFail(#"""
                     Expected JSON has more elements than Actual JSON.
 
                     Expected count: \#(expected.count)
@@ -606,30 +606,30 @@ extension XCTestCase {
 
                     Key path: \#(keyPathAsString(keyPath))
                 """#, file: file, line: line)
-                }
-                return false
             }
-            var finalResult = true
-            for (key, value) in expected {
-                let pathTreeValue = pathTree?[key]
-                let isPathEnd = pathTreeValue is String
-
-                finalResult = assertFlexibleEqual(
-                    expected: value,
-                    actual: actual[key],
-                    keyPath: keyPath + [key],
-                    pathTree: pathTreeValue as? [String: Any],
-                    exactMatchMode: isPathEnd != exactMatchMode,
-                    shouldAssert: shouldAssert,
-                    file: file,
-                    line: line)
-                && finalResult
-            }
-            return finalResult
+            return false
         }
+        var finalResult = true
+        for (key, value) in expected {
+            let pathTreeValue = pathTree?[key]
+            let isPathEnd = pathTreeValue is String
+
+            finalResult = assertFlexibleEqual(
+                expected: value,
+                actual: actual[key],
+                keyPath: keyPath + [key],
+                pathTree: pathTreeValue as? [String: Any],
+                exactMatchMode: isPathEnd != exactMatchMode,
+                shouldAssert: shouldAssert,
+                file: file,
+                line: line)
+                && finalResult
+        }
+        return finalResult
+    }
 
     // MARK: - Test setup and output helpers
-    
+
     /// Extracts and returns a set of valid wildcard indexes.
     ///
     /// This method only considers keys that match the array access format (ex: `[*123]`).
@@ -654,11 +654,11 @@ extension XCTestCase {
     private func extractValidWildcardIndexes(pathEndKeys: [String], file: StaticString = #file, line: UInt = #line) -> Set<Int> {
         let arrayIndexValueRegex = #"^\[(.*?)\]$"#
         let arrayIndexValues = Set(pathEndKeys
-            .flatMap { getCapturedRegexGroups(text: $0, regexPattern: arrayIndexValueRegex) })
-        
+                                    .flatMap { getCapturedRegexGroups(text: $0, regexPattern: arrayIndexValueRegex) })
+
         let potentialWildcardIndexes = arrayIndexValues
             .filter { $0.contains("*") }
-        
+
         var result: Set<Int> = []
         for potentialWildcardIndex in potentialWildcardIndexes {
             if potentialWildcardIndex.first != "*" {
@@ -674,7 +674,7 @@ extension XCTestCase {
         }
         return result
     }
-    
+
     /// Finds all matches of the `regexPattern` in the `text` and for each match, returns the original matched `String`
     /// and its corresponding non-null capture groups.
     ///
@@ -833,7 +833,7 @@ extension XCTestCase {
             return [first: construct(path: path, pathString: pathString)]
         }
     }
-    
+
     /// Extracts valid array format access components from a given path component and returns the separated components.
     ///
     /// Given `"key1[0][1]"`, the result is `["key1", "[0]", "[1]"]`.
@@ -867,34 +867,34 @@ extension XCTestCase {
             return pathComponent[previousIndex] == "\\"
         }
 
-    outerLoop: for i in pathComponent.indices.reversed() {
-        switch pathComponent[i] {
-        case "]" where !isNextCharBackslash(i: i):
-            bracketCount += 1
-            componentBuilder.append("]")
-        case "[" where !isNextCharBackslash(i: i):
-            bracketCount -= 1
-            componentBuilder.append("[")
-            if bracketCount == 0 {
-                components.insert(String(componentBuilder.reversed()), at: 0)
-                componentBuilder = ""
-                lastArrayAccessEnd = i
+        outerLoop: for i in pathComponent.indices.reversed() {
+            switch pathComponent[i] {
+            case "]" where !isNextCharBackslash(i: i):
+                bracketCount += 1
+                componentBuilder.append("]")
+            case "[" where !isNextCharBackslash(i: i):
+                bracketCount -= 1
+                componentBuilder.append("[")
+                if bracketCount == 0 {
+                    components.insert(String(componentBuilder.reversed()), at: 0)
+                    componentBuilder = ""
+                    lastArrayAccessEnd = i
+                }
+            case "\\":
+                if nextCharIsBackslash {
+                    nextCharIsBackslash = false
+                    continue outerLoop
+                } else {
+                    componentBuilder.append("\\")
+                }
+            default:
+                if bracketCount == 0 && i < lastArrayAccessEnd {
+                    components.insert(String(pathComponent[pathComponent.startIndex...i]), at: 0)
+                    break outerLoop
+                }
+                componentBuilder.append(pathComponent[i])
             }
-        case "\\":
-            if nextCharIsBackslash {
-                nextCharIsBackslash = false
-                continue outerLoop
-            } else {
-                componentBuilder.append("\\")
-            }
-        default:
-            if bracketCount == 0 && i < lastArrayAccessEnd {
-                components.insert(String(pathComponent[pathComponent.startIndex...i]), at: 0)
-                break outerLoop
-            }
-            componentBuilder.append(pathComponent[i])
         }
-    }
 
         // Add any remaining component that's not yet added
         if !componentBuilder.isEmpty {

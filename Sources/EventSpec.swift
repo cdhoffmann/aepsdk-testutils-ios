@@ -10,7 +10,6 @@
 // governing permissions and limitations under the License.
 //
 
-
 import Foundation
 
 /// Struct defining the event specifications - contains the event type and source

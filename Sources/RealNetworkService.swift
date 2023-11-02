@@ -50,7 +50,7 @@ public class RealNetworkService: NetworkService {
     public func assertAllNetworkRequestExpectations(file: StaticString = #file, line: UInt = #line) {
         helper.assertAllNetworkRequestExpectations(file: file, line: line)
     }
-    
+
     public func reset() {
         helper.reset()
     }
