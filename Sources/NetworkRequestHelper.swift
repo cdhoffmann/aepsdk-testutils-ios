@@ -210,13 +210,6 @@ class NetworkRequestHelper {
     }
 }
 
-extension URL {
-    func queryParam(_ param: String) -> String? {
-        guard let url = URLComponents(string: self.absoluteString) else { return nil }
-        return url.queryItems?.first(where: { $0.name == param })?.value
-    }
-}
-
 extension NetworkRequest {
     convenience init?(urlString: String, httpMethod: HttpMethod) {
         guard let url = URL(string: urlString) else {

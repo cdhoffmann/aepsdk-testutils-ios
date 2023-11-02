@@ -15,25 +15,6 @@ import AEPServices
 import Foundation
 import XCTest
 
-/// Struct defining the event specifications - contains the event type and source
-public struct EventSpec {
-    let type: String
-    let source: String
-}
-
-/// Hashable `EventSpec`, to be used as key in Dictionaries
-extension EventSpec: Hashable & Equatable {
-
-    public static func == (lhs: EventSpec, rhs: EventSpec) -> Bool {
-        return lhs.source.lowercased() == rhs.source.lowercased() && lhs.type.lowercased() == rhs.type.lowercased()
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(type)
-        hasher.combine(source)
-    }
-}
-
 public class TestBase: XCTestCase {
     /// Use this property to execute code logic in the first run in this test class; this value changes to False after the parent tearDown is executed
     public private(set) static var isFirstRun: Bool = true
