@@ -12,30 +12,30 @@
 import AEPServices
 import Foundation
 
-open class MockDataStore: NamedCollectionProcessing {
-    public var appGroup: String?
+public class MockDataStore: NamedCollectionProcessing {
+    private var appGroup: String?
 
-    open func getAppGroup() -> String? {
+    public func getAppGroup() -> String? {
         return appGroup
     }
 
-    open func setAppGroup(_ appGroup: String?) {
+    public func setAppGroup(_ appGroup: String?) {
         self.appGroup = appGroup
     }
 
-    open var dict = [String: Any?]()
+    public var dict = [String: Any?]()
 
     public init() {}
 
-    open func set(collectionName _: String, key: String, value: Any?) {
+    public func set(collectionName _: String, key: String, value: Any?) {
         dict[key] = value
     }
 
-    open func get(collectionName _: String, key: String) -> Any? {
+    public func get(collectionName _: String, key: String) -> Any? {
         return dict[key] as Any?
     }
 
-    open func remove(collectionName _: String, key: String) {
+    public func remove(collectionName _: String, key: String) {
         dict.removeValue(forKey: key)
     }
 }

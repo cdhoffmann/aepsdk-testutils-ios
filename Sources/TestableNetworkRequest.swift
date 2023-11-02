@@ -14,47 +14,27 @@
 import Foundation
 @testable import AEPServices
 
-/// A wrapper around `NetworkRequest` designed for use in testing scenarios.
-/// This class provides custom implementations of the `Equatable` and `Hashable` protocols.
-/// It is intended for use as keys in collections (such as dictionaries or sets) where uniqueness is determined using these protocols.
-///
-/// Note that the `Equatable` and `Hashable` conformance logic needs to align exactly for it to work as expected
-/// in the case of dictionary keys. Lowercased is used because across current test cases it has the same
-/// properties as case insensitive compare, and is straightforward to implement for `isEqual` and `hash`. However,
-/// if there are new cases where `.lowercased()` does not satisfy the property of a correct case insensitive compare, this logic
-/// will need to be updated accordingly to handle that case.
-open class TestableNetworkRequest: Hashable {
-    let networkRequest: NetworkRequest
+/// `TestableNetworkRequest` is a specialized subclass of `NetworkRequest` for use in testing scenarios.
+/// It provides custom, overriding logic for the `Equatable` and `Hashable` protocols, and is meant for direct use as keys
+/// in collections that rely on the previously mentioned protocols for uniqueness (dictionaries, sets, etc.).
+public class TestableNetworkRequest: NetworkRequest {
+    /// Construct from existing `NetworkRequest` instance
+    public convenience init(from networkRequest: NetworkRequest) {
+        self.init(url: networkRequest.url,
+                  httpMethod: networkRequest.httpMethod,
+                  connectPayloadData: networkRequest.connectPayload,
+                  httpHeaders: networkRequest.httpHeaders,
+                  connectTimeout: networkRequest.connectTimeout,
+                  readTimeout: networkRequest.readTimeout)
+    }
     
-    public var url: URL {
-        return networkRequest.url
-    }
-
-    public var httpMethod: HttpMethod {
-        return networkRequest.httpMethod
-    }
-
-    public var connectPayload: Data {
-        return networkRequest.connectPayload
-    }
-
-    public var httpHeaders: [String: String] {
-        return networkRequest.httpHeaders
-    }
-
-    public var connectTimeout: TimeInterval {
-        return networkRequest.connectTimeout
-    }
-
-    public var readTimeout: TimeInterval {
-        return networkRequest.readTimeout
-    }
-
-    /// Construct from existing `NetworkRequest` instance.
-    public init(from networkRequest: NetworkRequest) {
-        self.networkRequest = networkRequest
-    }
-
+    // Note that the Equatable and Hashable conformance logic needs to align exactly for it to work as expected
+    // in the case of dictionary keys. Lowercased is used because across current test cases it has the same
+    // properties as case insensitive compare, and is straightforward to implement for isEqual and hash. However,
+    // if there are new cases where lowercased does not satisfy the property of case insensitive compare, this logic
+    // will need to be updated accordingly to handle that case.
+    
+    // MARK: - Equatable (ObjC) conformance
     /// Determines equality by comparing the URL's scheme, host, path, and HTTP method, while excluding query parameters
     /// (and any other NetworkRequest properties).
     ///
@@ -62,33 +42,32 @@ open class TestableNetworkRequest: Hashable {
     ///
     /// - Parameter object: The object to be compared with the current instance.
     /// - Returns: A boolean value indicating whether the given object is equal to the current instance.
-    open func isEqual(_ object: Any?) -> Bool {
-        guard let otherNetworkRequest = object as? NetworkRequest else {
+    public override func isEqual(_ object: Any?) -> Bool {
+        guard let other = object as? NetworkRequest else {
             return false
         }
-        // Custom logic to compare network requests.
-        return networkRequest.url.host?.lowercased() == otherNetworkRequest.url.host?.lowercased()
-               && networkRequest.url.scheme?.lowercased() == otherNetworkRequest.url.scheme?.lowercased()
-               && networkRequest.url.path == otherNetworkRequest.url.path
-               && networkRequest.httpMethod.rawValue == otherNetworkRequest.httpMethod.rawValue
+        
+        return url.host?.lowercased() == other.url.host?.lowercased()
+                && url.scheme?.lowercased() == other.url.scheme?.lowercased()
+                && url.path == other.url.path
+                && httpMethod.rawValue == other.httpMethod.rawValue
     }
-
+    
+    // MARK: - Hashable (ObjC) conformance
     /// Determines the hash value by combining the URL's scheme, host, path, and HTTP method, while excluding query parameters
     /// (and any other NetworkRequest properties).
     ///
     /// Note that host and scheme use `String.lowercased()` to perform case insensitive combination.
-    open func hash(into hasher: inout Hasher) {
-        if let scheme = networkRequest.url.scheme {
+    public override var hash: Int {
+        var hasher = Hasher()
+        if let scheme = url.scheme {
             hasher.combine(scheme.lowercased())
         }
-        if let host = networkRequest.url.host {
+        if let host = url.host {
             hasher.combine(host.lowercased())
         }
-        hasher.combine(networkRequest.url.path)
-        hasher.combine(networkRequest.httpMethod.rawValue)
-    }
-
-    public static func == (lhs: TestableNetworkRequest, rhs: TestableNetworkRequest) -> Bool {
-        return lhs.isEqual(rhs.networkRequest)
+        hasher.combine(url.path)
+        hasher.combine(httpMethod.rawValue)
+        return hasher.finalize()
     }
 }

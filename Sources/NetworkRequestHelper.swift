@@ -20,13 +20,13 @@ import XCTest
 /// - See also:
 ///    - ``MockNetworkService``
 ///    - ``RealNetworkService``
-open class NetworkRequestHelper {
-    public var sentNetworkRequests: [TestableNetworkRequest: [NetworkRequest]] = [:]
+class NetworkRequestHelper {
+    private var sentNetworkRequests: [TestableNetworkRequest: [NetworkRequest]] = [:]
     /// Matches sent `NetworkRequest`s with their corresponding `HttpConnection` responses.
-    public private(set) var networkResponses: [TestableNetworkRequest: [HttpConnection]] = [:]
-    public var expectedNetworkRequests: [TestableNetworkRequest: CountDownLatch] = [:]
+    private(set) var networkResponses: [TestableNetworkRequest: [HttpConnection]] = [:]
+    private var expectedNetworkRequests: [TestableNetworkRequest: CountDownLatch] = [:]
 
-    open func recordSentNetworkRequest(_ networkRequest: NetworkRequest) {
+    func recordSentNetworkRequest(_ networkRequest: NetworkRequest) {
         TestBase.log("Received connectAsync to URL \(networkRequest.url.absoluteString) and HTTPMethod \(networkRequest.httpMethod.toString())")
         let testableNetworkRequest = TestableNetworkRequest(from: networkRequest)
         if let equalNetworkRequest = sentNetworkRequests.first(where: { key, _ in
@@ -38,7 +38,7 @@ open class NetworkRequestHelper {
         }
     }
 
-    open func reset() {
+    func reset() {
         expectedNetworkRequests.removeAll()
         sentNetworkRequests.removeAll()
         networkResponses.removeAll()
@@ -47,7 +47,7 @@ open class NetworkRequestHelper {
     /// Decrements the expectation count for a given network request.
     ///
     /// - Parameter networkRequest: The `NetworkRequest` for which the expectation count should be decremented.
-    open func countDownExpected(networkRequest: NetworkRequest) {
+    func countDownExpected(networkRequest: NetworkRequest) {
         for expectedNetworkRequest in expectedNetworkRequests {
             if expectedNetworkRequest.key == TestableNetworkRequest(from: networkRequest) {
                 expectedNetworkRequest.value.countDown()
@@ -63,7 +63,7 @@ open class NetworkRequestHelper {
     ///   - timeout: The maximum duration (in seconds) to wait for the expected responses before timing out.
     ///
     /// - Returns: A `DispatchTimeoutResult` with the result of the wait operation, or `nil` if the `NetworkRequest` does not match any expected request.
-    open func awaitFor(networkRequest: NetworkRequest, timeout: TimeInterval) -> DispatchTimeoutResult? {
+    private func awaitFor(networkRequest: NetworkRequest, timeout: TimeInterval) -> DispatchTimeoutResult? {
         for expectedNetworkRequest in expectedNetworkRequests {
             if expectedNetworkRequest.key == TestableNetworkRequest(from: networkRequest) {
                 return expectedNetworkRequest.value.await(timeout: timeout)
@@ -79,7 +79,7 @@ open class NetworkRequestHelper {
     /// - Parameter networkRequest: The `NetworkRequest` for which to get matching requests.
     ///
     /// - Returns: An array of `NetworkRequest`s that match the specified `networkRequest`. If no matches are found, an empty array is returned.
-    open func getSentRequests(matching networkRequest: NetworkRequest) -> [NetworkRequest] {
+    func getSentRequests(matching networkRequest: NetworkRequest) -> [NetworkRequest] {
         for request in sentNetworkRequests {
             if request.key == TestableNetworkRequest(from: networkRequest) {
                 return request.value
@@ -95,7 +95,7 @@ open class NetworkRequestHelper {
     /// - Parameters:
     ///   - networkRequest: The `NetworkRequest`for which the response is being set.
     ///   - responseConnection: The `HttpConnection` to set as a response.
-    open func addResponse(for networkRequest: NetworkRequest, responseConnection: HttpConnection) {
+    func addResponse(for networkRequest: NetworkRequest, responseConnection: HttpConnection) {
         let testableNetworkRequest = TestableNetworkRequest(from: networkRequest)
         if networkResponses[testableNetworkRequest] != nil {
             networkResponses[testableNetworkRequest]?.append(responseConnection)
@@ -109,7 +109,7 @@ open class NetworkRequestHelper {
     ///
     /// - Parameters:
     ///   - networkRequest: The `NetworkRequest` for which to remove all responses.
-    open func removeAllResponses(for networkRequest: NetworkRequest) {
+    func removeAllResponses(for networkRequest: NetworkRequest) {
         let testableNetworkRequest = TestableNetworkRequest(from: networkRequest)
         networkResponses[testableNetworkRequest] = nil
     }
@@ -118,7 +118,7 @@ open class NetworkRequestHelper {
     ///
     /// - Parameter networkRequest: The `NetworkRequest` for which the response should be retrieved.
     /// - Returns: The array of `HttpConnection` responses associated with the provided `NetworkRequest`, or `nil` if no response was found.
-    open func getResponses(for networkRequest: NetworkRequest) -> [HttpConnection]? {
+    func getResponses(for networkRequest: NetworkRequest) -> [HttpConnection]? {
         return networkResponses[TestableNetworkRequest(from: networkRequest)]
     }
 
@@ -131,7 +131,7 @@ open class NetworkRequestHelper {
     ///   - expectedCount: The number of times the request is expected to be sent. The default value is 1.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
-    open func setExpectation(for networkRequest: NetworkRequest, expectedCount: Int32 = 1, file: StaticString = #file, line: UInt = #line) {
+    func setExpectation(for networkRequest: NetworkRequest, expectedCount: Int32 = 1, file: StaticString = #file, line: UInt = #line) {
         guard expectedCount > 0 else {
             assertionFailure("Expected event count should be greater than 0", file: file, line: line)
             return
@@ -146,7 +146,7 @@ open class NetworkRequestHelper {
     ///   - line: The line from which the method is called, used for localized assertion failures.
     /// - SeeAlso:
     ///     - ``setExpectationForNetworkRequest(url:httpMethod:)``
-    open func assertAllNetworkRequestExpectations(file: StaticString = #file, line: UInt = #line) {
+    func assertAllNetworkRequestExpectations(file: StaticString = #file, line: UInt = #line) {
         guard !expectedNetworkRequests.isEmpty else {
             assertionFailure("There are no network request expectations set, use this API after calling setExpectationForNetworkRequest", file: file, line: line)
             return
@@ -175,7 +175,7 @@ open class NetworkRequestHelper {
     ///
     /// - SeeAlso:
     ///     - ``setExpectationForNetworkRequest(networkRequest:expectedCount:file:line:)``
-    open func getNetworkRequestsWith(url: String, httpMethod: HttpMethod, expectationTimeout: TimeInterval = TestConstants.Defaults.WAIT_NETWORK_REQUEST_TIMEOUT, file: StaticString = #file, line: UInt = #line) -> [NetworkRequest] {
+    func getNetworkRequestsWith(url: String, httpMethod: HttpMethod, expectationTimeout: TimeInterval = TestConstants.Defaults.WAIT_NETWORK_REQUEST_TIMEOUT, file: StaticString = #file, line: UInt = #line) -> [NetworkRequest] {
         guard let networkRequest = NetworkRequest(urlString: url, httpMethod: httpMethod) else {
             return []
         }
@@ -192,7 +192,7 @@ open class NetworkRequestHelper {
     ///   - expectationTimeout: The duration (in seconds) to wait for **expected network requests** before failing, with a default of ``WAIT_NETWORK_REQUEST_TIMEOUT``. Otherwise waits for ``WAIT_TIMEOUT`` without failing.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
-    open func awaitRequest(_ networkRequest: NetworkRequest, expectationTimeout: TimeInterval = TestConstants.Defaults.WAIT_NETWORK_REQUEST_TIMEOUT, file: StaticString = #file, line: UInt = #line) {
+    private func awaitRequest(_ networkRequest: NetworkRequest, expectationTimeout: TimeInterval = TestConstants.Defaults.WAIT_NETWORK_REQUEST_TIMEOUT, file: StaticString = #file, line: UInt = #line) {
 
         if let waitResult = awaitFor(networkRequest: networkRequest, timeout: expectationTimeout) {
             XCTAssertFalse(waitResult == DispatchTimeoutResult.timedOut, "Timed out waiting for network request(s) with URL \(networkRequest.url) and HTTPMethod \(networkRequest.httpMethod.toString())", file: file, line: line)
@@ -203,7 +203,7 @@ open class NetworkRequestHelper {
 
     /// - Parameters:
     ///   - timeout:how long should this method wait, in seconds; by default it waits up to 1 second
-    open func wait(_ timeout: UInt32? = TestConstants.Defaults.WAIT_TIMEOUT) {
+    func wait(_ timeout: UInt32? = TestConstants.Defaults.WAIT_TIMEOUT) {
         if let timeout = timeout {
             sleep(timeout)
         }
@@ -211,14 +211,14 @@ open class NetworkRequestHelper {
 }
 
 extension URL {
-    public func queryParam(_ param: String) -> String? {
+    func queryParam(_ param: String) -> String? {
         guard let url = URLComponents(string: self.absoluteString) else { return nil }
         return url.queryItems?.first(where: { $0.name == param })?.value
     }
 }
 
 extension NetworkRequest {
-    public convenience init?(urlString: String, httpMethod: HttpMethod) {
+    convenience init?(urlString: String, httpMethod: HttpMethod) {
         guard let url = URL(string: urlString) else {
             assertionFailure("Unable to convert the provided string \(urlString) to URL")
             return nil
@@ -229,7 +229,7 @@ extension NetworkRequest {
     /// Converts the `connectPayload` into a flattened dictionary containing its data.
     /// This API fails the assertion if the request body cannot be parsed as JSON.
     /// - Returns: The JSON request body represented as a flattened dictionary
-    public func getFlattenedBody(file: StaticString = #file, line: UInt = #line) -> [String: Any] {
+    func getFlattenedBody(file: StaticString = #file, line: UInt = #line) -> [String: Any] {
         if !self.connectPayload.isEmpty {
             if let payloadAsDictionary = try? JSONSerialization.jsonObject(with: self.connectPayload, options: []) as? [String: Any] {
                 return flattenDictionary(dict: payloadAsDictionary)

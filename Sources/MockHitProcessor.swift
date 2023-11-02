@@ -14,14 +14,14 @@
 import Foundation
 
 /// MockDataQueue - see also AEPServices/Mocks
-open class MockHitProcessor: HitProcessing {
-    open func retryInterval(for entity: DataEntity) -> TimeInterval {
+public class MockHitProcessor: HitProcessing {
+    public func retryInterval(for entity: DataEntity) -> TimeInterval {
         return 5
     }
 
     public init() {}
 
-    open func processHit(entity _: DataEntity, completion: @escaping (Bool) -> Void) {
+    public func processHit(entity _: DataEntity, completion: @escaping (Bool) -> Void) {
         completion(true)
     }
 }
