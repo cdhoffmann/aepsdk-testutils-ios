@@ -17,7 +17,12 @@ import XCTest
 /// `Networking` conforming network service utility used for tests that require mocked network requests and mocked responses
 public class MockNetworkService: Networking {
     private let helper: NetworkRequestHelper = NetworkRequestHelper()
-    private var responseDelay: UInt32 = 0
+    private var responseDelay: UInt32
+    
+    // Public initializer
+    public init(responseDelay: UInt32 = 0) {
+        self.responseDelay = responseDelay
+    }
 
     public func connectAsync(networkRequest: NetworkRequest, completionHandler: ((HttpConnection) -> Void)? = nil) {
         if self.responseDelay > 0 {
