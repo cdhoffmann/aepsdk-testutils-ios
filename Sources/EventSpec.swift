@@ -26,7 +26,7 @@ extension EventSpec: Hashable & Equatable {
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(type)
-        hasher.combine(source)
+        hasher.combine(type.lowercased())
+        hasher.combine(source.lowercased())
     }
 }
