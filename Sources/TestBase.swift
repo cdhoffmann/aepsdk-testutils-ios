@@ -15,14 +15,14 @@ import AEPServices
 import Foundation
 import XCTest
 
-public class TestBase: XCTestCase {
+open class TestBase: XCTestCase {
     /// Use this property to execute code logic in the first run in this test class; this value changes to False after the parent tearDown is executed
     public private(set) static var isFirstRun: Bool = true
     /// Use this setting to enable debug mode logging in the `TestBase`
     public static var debugEnabled = false
 
     // Runs once per test suite
-    public class override func setUp() {
+    open class override func setUp() {
         super.setUp()
         UserDefaults.clearAll()
         FileManager.default.clearCache()
@@ -30,13 +30,13 @@ public class TestBase: XCTestCase {
     }
 
     // Runs before each test case
-    public override func setUp() {
+    open override func setUp() {
         super.setUp()
         continueAfterFailure = false
         MobileCore.registerExtension(InstrumentedExtension.self)
     }
 
-    public override func tearDown() {
+    open override func tearDown() {
         super.tearDown()
         // Wait .2 seconds in case there are unexpected events that were in the dispatch process during cleanup
         usleep(200000)
