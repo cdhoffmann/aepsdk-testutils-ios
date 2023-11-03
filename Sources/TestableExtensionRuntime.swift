@@ -19,16 +19,16 @@ import Foundation
 /// See also AEPCore/Mocks
 public class TestableExtensionRuntime: ExtensionRuntime {
 
-    public func getHistoricalEvents(_ requests: [EventHistoryRequest], enforceOrder: Bool, handler: @escaping ([EventHistoryResult]) -> Void) {
-        handler([])
-    }
-
     public var listeners: [String: EventListener] = [:]
     public var dispatchedEvents: [Event] = []
     public var createdSharedStates: [[String: Any]?] = []
     public var createdXdmSharedStates: [[String: Any]?] = []
     public var mockedSharedStates: [String: SharedStateResult] = [:]
     public var mockedXdmSharedStates: [String: SharedStateResult] = [:]
+    public var receivedEventHistoryRequests: [EventHistoryRequest] = []
+    public var receivedEnforceOrder: Bool = false
+    public var mockEventHistoryResults: [EventHistoryResult] = []
+    public var ignoredEvents = Set<String>()
 
     public init() {}
 
@@ -42,6 +42,9 @@ public class TestableExtensionRuntime: ExtensionRuntime {
     }
 
     public func dispatch(event: Event) {
+        if shouldIgnore(event) {
+            return
+        }
         dispatchedEvents += [event]
     }
 
@@ -94,6 +97,24 @@ public class TestableExtensionRuntime: ExtensionRuntime {
     public func stopEvents() {}
 
     // MARK: - Helper methods
+    
+    /// Ignores the events from being dispatched by event hub.
+    /// - Parameters:
+    ///  - type: `EventType` of the event to be ignored
+    ///  - source: `EventSource` of the event to be ignored
+    public func ignoreEvent(type: String, source: String) {
+        ignoredEvents.insert("\(type)-\(source)")
+    }
+    /// Removes all the ignored events.
+    public func resetIgnoredEvents() {
+        ignoredEvents.removeAll()
+    }
+    /// Determines if the event is to be ignored and not dispatched by event hub
+    /// - Parameter event: An `Event`
+    private func shouldIgnore(_ event: Event) -> Bool {
+        ignoredEvents.contains("\(event.type)-\(event.source)")
+    }
+
     /// Simulate the events that are being sent to event hub, if there is a listener registered for that type of event, that listener will receive the event
     /// - Parameters:
     ///   - events: the sequence of the events
@@ -150,38 +171,44 @@ public class TestableExtensionRuntime: ExtensionRuntime {
         createdSharedStates = []
         createdXdmSharedStates = []
     }
+    
+    public func getHistoricalEvents(_ events: [EventHistoryRequest], enforceOrder: Bool, handler: @escaping ([EventHistoryResult]) -> Void) {
+        receivedEventHistoryRequests = events
+        receivedEnforceOrder = enforceOrder
+        handler(mockEventHistoryResults)
+    }
 }
 
 /// Convenience properties for `TestableExtensionRuntime`
-extension TestableExtensionRuntime {
+public extension TestableExtensionRuntime {
 
     /// First dispatched event
-    public var firstEvent: Event? {
+    var firstEvent: Event? {
         dispatchedEvents[0]
     }
 
     /// Second dispatched event
-    public var secondEvent: Event? {
+    var secondEvent: Event? {
         dispatchedEvents[1]
     }
 
     /// Third dispatched event
-    public var thirdEvent: Event? {
+    var thirdEvent: Event? {
         dispatchedEvents[2]
     }
 
     /// First created shared state
-    public var firstSharedState: [String: Any]? {
+    var firstSharedState: [String: Any]? {
         createdSharedStates[0]
     }
 
     /// Second created shared state
-    public var secondSharedState: [String: Any]? {
+    var secondSharedState: [String: Any]? {
         createdSharedStates[1]
     }
 
     /// Third created shared state
-    public var thirdSharedState: [String: Any]? {
+    var thirdSharedState: [String: Any]? {
         createdSharedStates[2]
     }
 }
