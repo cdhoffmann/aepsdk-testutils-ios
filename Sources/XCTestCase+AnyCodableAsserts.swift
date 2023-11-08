@@ -15,21 +15,13 @@ import AEPServices
 import Foundation
 import XCTest
 
-extension XCTestCase {
-    // MARK: - AnyCodable helpers
-
+public protocol AnyCodableAsserts {
     /// Gets the `AnyCodable` representation of a JSON string
-    public func getAnyCodable(_ jsonString: String) -> AnyCodable? {
-        return try? JSONDecoder().decode(AnyCodable.self, from: jsonString.data(using: .utf8)!)
-    }
-
+    func getAnyCodable(_ jsonString: String) -> AnyCodable?
+    
     /// Gets an event's data payload converted into `AnyCodable` format
-    public func getAnyCodable(_ event: Event) -> AnyCodable? {
-        return AnyCodable(AnyCodable.from(dictionary: event.data))
-    }
-
-    // MARK: - AnyCodable exact equivalence test assertion methods
-
+    func getAnyCodable(_ event: Event) -> AnyCodable?
+    
     /// Asserts exact equality between two `AnyCodable` instances.
     ///
     /// In the event of an assertion failure, this function provides a trace of the key path, which includes dictionary keys and array indexes,
@@ -40,11 +32,8 @@ extension XCTestCase {
     ///   - actual: The actual `AnyCodable` to compare.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
-    public func assertEqual(expected: AnyCodable?, actual: AnyCodable?, file: StaticString = #file, line: UInt = #line) {
-        assertEqual(expected: expected, actual: actual, keyPath: [], file: file, line: line)
-    }
-
-    // MARK: - AnyCodable flexible validation test assertion methods
+    func assertEqual(expected: AnyCodable?, actual: AnyCodable?, file: StaticString, line: UInt)
+    
     /// Performs a flexible JSON comparison where only the key-value pairs from the expected JSON are required.
     /// By default, the function validates that both values are of the same type.
     ///
@@ -88,11 +77,8 @@ extension XCTestCase {
     ///   - exactMatchPaths: The key paths in the expected JSON that should use exact matching mode, where values require both the same type and literal value.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
-    public func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, exactMatchPaths: [String] = [], file: StaticString = #file, line: UInt = #line) {
-        let pathTree = generatePathTree(paths: exactMatchPaths, file: file, line: line)
-        assertFlexibleEqual(expected: expected, actual: actual, pathTree: pathTree, exactMatchMode: false, file: file, line: line)
-    }
-
+    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, exactMatchPaths: [String], file: StaticString, line: UInt)
+    
     /// Performs a flexible JSON comparison where only the key-value pairs from the expected JSON are required.
     /// By default, the function uses exact match mode, validating that both values are of the same type
     /// and have the same literal value.
@@ -137,11 +123,32 @@ extension XCTestCase {
     ///   - typeMatchPaths: The key paths in the expected JSON that should use type matching mode, where values require only the same type (and are non-nil if the expected value is not nil).
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
-    public func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, typeMatchPaths: [String] = [], file: StaticString = #file, line: UInt = #line) {
+    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, typeMatchPaths: [String], file: StaticString, line: UInt)
+}
+
+public extension AnyCodableAsserts where Self: XCTestCase {
+    func getAnyCodable(_ jsonString: String) -> AnyCodable? {
+        return try? JSONDecoder().decode(AnyCodable.self, from: jsonString.data(using: .utf8)!)
+    }
+
+    func getAnyCodable(_ event: Event) -> AnyCodable? {
+        return AnyCodable(AnyCodable.from(dictionary: event.data))
+    }
+
+    func assertEqual(expected: AnyCodable?, actual: AnyCodable?, file: StaticString = #file, line: UInt = #line) {
+        XCTAssertEqual(expected, actual, file: file, line: line)
+    }
+
+    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, exactMatchPaths: [String] = [], file: StaticString = #file, line: UInt = #line) {
+        let pathTree = generatePathTree(paths: exactMatchPaths, file: file, line: line)
+        assertFlexibleEqual(expected: expected, actual: actual, pathTree: pathTree, exactMatchMode: false, file: file, line: line)
+    }
+
+    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, typeMatchPaths: [String] = [], file: StaticString = #file, line: UInt = #line) {
         let pathTree = generatePathTree(paths: typeMatchPaths, file: file, line: line)
         assertFlexibleEqual(expected: expected, actual: actual, pathTree: pathTree, exactMatchMode: true, file: file, line: line)
     }
-
+    
     // MARK: - AnyCodable exact equivalence helpers
     /// Compares the given `expected` and `actual` values for exact equality. If they are not equal and an assertion fails,
     /// a test failure occurs.
