@@ -132,7 +132,10 @@ public extension AnyCodableAsserts where Self: XCTestCase {
     }
 
     func getAnyCodable(_ event: Event) -> AnyCodable? {
-        return AnyCodable(AnyCodable.from(dictionary: event.data))
+        guard let data = event.data else {
+            return AnyCodable(nil)
+        }
+        return AnyCodable(AnyCodable.from(dictionary: data))
     }
 
     func assertEqual(expected: AnyCodable?, actual: AnyCodable?, file: StaticString = #file, line: UInt = #line) {
