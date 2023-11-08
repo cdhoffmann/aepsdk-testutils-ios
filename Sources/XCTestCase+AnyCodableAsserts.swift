@@ -18,10 +18,10 @@ import XCTest
 public protocol AnyCodableAsserts {
     /// Gets the `AnyCodable` representation of a JSON string
     func getAnyCodable(_ jsonString: String) -> AnyCodable?
-    
+
     /// Gets an event's data payload converted into `AnyCodable` format
     func getAnyCodable(_ event: Event) -> AnyCodable?
-    
+
     /// Asserts exact equality between two `AnyCodable` instances.
     ///
     /// In the event of an assertion failure, this function provides a trace of the key path, which includes dictionary keys and array indexes,
@@ -33,7 +33,7 @@ public protocol AnyCodableAsserts {
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
     func assertEqual(expected: AnyCodable?, actual: AnyCodable?, file: StaticString, line: UInt)
-    
+
     /// Performs a flexible JSON comparison where only the key-value pairs from the expected JSON are required.
     /// By default, the function validates that both values are of the same type.
     ///
@@ -78,7 +78,7 @@ public protocol AnyCodableAsserts {
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
     func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, exactMatchPaths: [String], file: StaticString, line: UInt)
-    
+
     /// Performs a flexible JSON comparison where only the key-value pairs from the expected JSON are required.
     /// By default, the function uses exact match mode, validating that both values are of the same type
     /// and have the same literal value.
@@ -148,7 +148,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
         let pathTree = generatePathTree(paths: typeMatchPaths, file: file, line: line)
         assertFlexibleEqual(expected: expected, actual: actual, pathTree: pathTree, exactMatchMode: true, file: file, line: line)
     }
-    
+
     // MARK: - AnyCodable exact equivalence helpers
     /// Compares the given `expected` and `actual` values for exact equality. If they are not equal and an assertion fails,
     /// a test failure occurs.
