@@ -209,7 +209,7 @@ class NetworkRequestHelper {
     }
 }
 
-extension NetworkRequest {
+public extension NetworkRequest {
     convenience init?(urlString: String, httpMethod: HttpMethod) {
         guard let url = URL(string: urlString) else {
             assertionFailure("Unable to convert the provided string \(urlString) to URL")
