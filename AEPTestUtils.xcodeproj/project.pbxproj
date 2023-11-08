@@ -41,6 +41,8 @@
 		4C0293C22AE1D9AD0093CCBA /* XCTestCase+AnyCodableAsserts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0293C12AE1D9AD0093CCBA /* XCTestCase+AnyCodableAsserts.swift */; };
 		4C7043472AF45A98008CF67D /* EventSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7043462AF45A98008CF67D /* EventSpec.swift */; };
 		4C7043492AF45B05008CF67D /* URL+Testable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7043482AF45B05008CF67D /* URL+Testable.swift */; };
+		4C70434C2AFB0D4F008CF67D /* AnyCodableAssertsParameterizedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C70434A2AFB0D4F008CF67D /* AnyCodableAssertsParameterizedTests.swift */; };
+		4C70434D2AFB0D4F008CF67D /* AnyCodableAssertsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C70434B2AFB0D4F008CF67D /* AnyCodableAssertsTests.swift */; };
 		4C9CF7C82AE20A7300EB88D4 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9CF7C72AE20A7300EB88D4 /* XCTest.framework */; };
 		72EC4ED272DA96D1B2F44F4D /* Pods_UnitTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E05720B5778E784DC19DA9C /* Pods_UnitTests.framework */; };
 		D4ABABAE251A7D95008076BF /* AEPTestUtils.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D444995F2519506B0093B364 /* AEPTestUtils.framework */; };
@@ -101,6 +103,8 @@
 		4C0293C12AE1D9AD0093CCBA /* XCTestCase+AnyCodableAsserts.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCTestCase+AnyCodableAsserts.swift"; sourceTree = "<group>"; };
 		4C7043462AF45A98008CF67D /* EventSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventSpec.swift; sourceTree = "<group>"; };
 		4C7043482AF45B05008CF67D /* URL+Testable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "URL+Testable.swift"; sourceTree = "<group>"; };
+		4C70434A2AFB0D4F008CF67D /* AnyCodableAssertsParameterizedTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnyCodableAssertsParameterizedTests.swift; sourceTree = "<group>"; };
+		4C70434B2AFB0D4F008CF67D /* AnyCodableAssertsTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnyCodableAssertsTests.swift; sourceTree = "<group>"; };
 		4C9CF7C72AE20A7300EB88D4 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		D444995F2519506B0093B364 /* AEPTestUtils.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AEPTestUtils.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4967534251130D3001F5F95 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -196,6 +200,8 @@
 		D4D5B4F1242EBD2200CAB6E4 /* UnitTests */ = {
 			isa = PBXGroup;
 			children = (
+				4C70434A2AFB0D4F008CF67D /* AnyCodableAssertsParameterizedTests.swift */,
+				4C70434B2AFB0D4F008CF67D /* AnyCodableAssertsTests.swift */,
 				D4D5B5252432599B00CAB6E4 /* Info.plist */,
 			);
 			name = UnitTests;
@@ -286,6 +292,7 @@
 					};
 					D4D5B5202432599B00CAB6E4 = {
 						CreatedOnToolsVersion = 11.3.1;
+						LastSwiftMigration = 1500;
 					};
 				};
 			};
@@ -457,6 +464,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4C70434C2AFB0D4F008CF67D /* AnyCodableAssertsParameterizedTests.swift in Sources */,
+				4C70434D2AFB0D4F008CF67D /* AnyCodableAssertsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -697,6 +706,7 @@
 			baseConfigurationReference = DD5E7AA3DFCAE33634061318 /* Pods-UnitTests.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = FKGEE875K4;
 				INFOPLIST_FILE = Tests/UnitTests/Info.plist;
@@ -708,6 +718,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.adobe.UnitTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TVOS_DEPLOYMENT_TARGET = 10.0;
@@ -719,6 +730,7 @@
 			baseConfigurationReference = FA085216E06413034AC11F06 /* Pods-UnitTests.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = FKGEE875K4;
 				INFOPLIST_FILE = Tests/UnitTests/Info.plist;
