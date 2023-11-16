@@ -149,23 +149,20 @@ public class NodeConfig: Hashable {
          options: [OptionKey: Config] = [:],
          subtreeOptions: [OptionKey: Config],
          children: Set<NodeConfig> = []) {
+        // Validate subtreeOptions has every option defined
+        var validatedSubtreeOptions = subtreeOptions
+        for key in OptionKey.allCases {
+            if let foundConfig = subtreeOptions[key] {
+                continue
+            }
+            // If key is missing, add a default value
+            validatedSubtreeOptions[key] = Config(isActive: false)
+        }
+        
         self.name = name
         self.options = options
-        self.subtreeOptions = subtreeOptions
+        self.subtreeOptions = validatedSubtreeOptions
         self.children = children
-    }
-    
-    init(name: String?,
-         wildcardMatch: Config? = nil,
-         collectionEqualCount: Config? = nil,
-         primitiveExactMatch: Config? = nil,
-         children: Set<NodeConfig> = []) {
-
-        self.name = name
-        self.children = children
-        self.options[.wildcardMatch] = wildcardMatch
-        self.options[.collectionEqualCount] = collectionEqualCount
-        self.options[.primitiveExactMatch] = primitiveExactMatch
     }
     
     // Implementation of Hashable
