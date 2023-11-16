@@ -14,105 +14,139 @@
 import Foundation
 import XCTest
 
+/// A protocol that defines a multi-path configuration.
+///
+/// This protocol provides the necessary properties to configure multiple paths
+/// within a node configuration context. It is designed to be used where multiple
+/// paths need to be specified along with associated configuration options.
 public protocol MultiPathConfig {
+    /// An array of optional strings representing the paths to be configured. Each string in the array represents a distinct path. `nil` indicates the top level object.
     var paths: [String?] { get }
+    /// A `NodeConfig.OptionKey` value that specifies the type of option applied to the paths.
     var optionKey: NodeConfig.OptionKey { get }
+    /// A Boolean value indicating whether the configuration is active.
     var isActive: Bool { get }
+    /// A `NodeConfig.Scope` value defining the scope of the configuration, such as whether it is applied to a single node or a subtree.
     var scope: NodeConfig.Scope { get }
 }
 
+/// A structure representing the configuration for a single path.
+///
+/// This structure is used to define the configuration details for a specific path within
+/// a node configuration context. It encapsulates the path's specific options and settings.
 struct PathConfig {
+    ///  An optional String representing the path to be configured. `nil` indicates the top level object.
     var path: String?
+    /// A `NodeConfig.OptionKey` value that specifies the type of option applied to the path.
     var optionKey: NodeConfig.OptionKey
+    /// A Boolean value indicating whether the configuration is active.
     var isActive: Bool
+    /// A `NodeConfig.Scope` value defining the scope of the configuration, such as whether it is applied to a single node or a subtree.
     var scope: NodeConfig.Scope
 }
 
+/// A structure representing the wildcard match configuration.
 public struct WildcardMatch: MultiPathConfig {
     public let paths: [String?]
     public let optionKey: NodeConfig.OptionKey = .wildcardMatch
     public let isActive: Bool
     public let scope: NodeConfig.Scope
     
+    /// Initializes a new instance with an array of paths.
     public init(paths: [String?], isActive: Bool = true, scope: NodeConfig.Scope = .singleNode) {
         self.paths = paths
         self.isActive = isActive
         self.scope = scope
     }
     
+    /// Variadic initializer allowing multiple string paths.
     public init(paths: String?..., isActive: Bool = true, scope: NodeConfig.Scope = .singleNode) {
         self.init(paths: paths, isActive: isActive, scope: scope)
     }
 }
 
+/// A structure representing the collection equal count configuration.
 public struct CollectionEqualCount: MultiPathConfig {
     public let paths: [String?]
     public let optionKey: NodeConfig.OptionKey = .collectionEqualCount
     public let isActive: Bool
     public let scope: NodeConfig.Scope
 
+    /// Initializes a new instance with an array of paths.
     public init(paths: [String?], isActive: Bool = true, scope: NodeConfig.Scope = .singleNode) {
         self.paths = paths
         self.isActive = isActive
         self.scope = scope
     }
     
+    /// Variadic initializer allowing multiple string paths.
     public init(paths: String?..., isActive: Bool = true, scope: NodeConfig.Scope = .singleNode) {
         self.init(paths: paths, isActive: isActive, scope: scope)
     }
 }
 
+/// A structure representing the value exact match configuration.
 public struct ValueExactMatch: MultiPathConfig {
     public let paths: [String?]
     public let optionKey: NodeConfig.OptionKey = .primitiveExactMatch
     public let isActive: Bool = true
     public let scope: NodeConfig.Scope
     
+    /// Initializes a new instance with an array of paths.
     public init(paths: [String?], scope: NodeConfig.Scope = .singleNode) {
         self.paths = paths
         self.scope = scope
     }
     
+    /// Variadic initializer allowing multiple string paths.
     public init(paths: String?..., scope: NodeConfig.Scope = .singleNode) {
         self.init(paths: paths, scope: scope)
     }
 }
 
+/// A structure representing the value type match configuration.
 public struct ValueTypeMatch: MultiPathConfig {
     public let paths: [String?]
     public let optionKey: NodeConfig.OptionKey = .primitiveExactMatch
     public let isActive: Bool = false
     public let scope: NodeConfig.Scope
 
+    /// Initializes a new instance with an array of paths.
     public init(paths: [String?], scope: NodeConfig.Scope = .singleNode) {
         self.paths = paths
         self.scope = scope
     }
     
+    /// Variadic initializer allowing multiple string paths.
     public init(paths: String?..., scope: NodeConfig.Scope = .singleNode) {
         self.init(paths: paths, scope: scope)
     }
 }
 
+/// A class representing the configuration for a node in a tree structure.
+///
+/// `NodeConfig` provides a way to set configuration options for nodes in a hierarchical tree structure.
+/// It supports different types of configuration options, including options that apply to individual nodes
+/// or to entire subtrees.
 public class NodeConfig: Hashable {
+    /// Represents the scope of the configuration; that is, to which nodes the configuration applies.
     public enum Scope: String, Hashable {
+        /// Only this node should apply the current configuration.
         case singleNode
+        /// This node and all descendants should apply the current configuration.
         case subtree
     }
     
-    public enum OptionKey: String, Hashable {
+    /// Defines the types of configuration options available for nodes.
+    public enum OptionKey: String, Hashable, CaseIterable {
         case wildcardMatch
-        case collectionEqualCount // should this be broken into both options behind the scenes?
+        case collectionEqualCount
         case primitiveExactMatch
-        // Add other keys as needed
-        // var nullOrGivenType: Config?
-        // var caseSensitivity: Config?
-        // arrayEqualCount
-        // dictionaryEqualCount
     }
     
+    /// Represents the configuration details for a comparison option
     public struct Config: Hashable {
-        // required because all options are toggles and presnece of scope is not enough to determine what type of option should be applied
+        /// Flag for is an option is active or not.
         var isActive: Bool
     }
     
@@ -120,14 +154,17 @@ public class NodeConfig: Hashable {
         case option(OptionKey, Config, Scope)
     }
     
+    /// An string representing the name of the node. `nil` refers to the top level object
     let name: String?
-    /// options set for this node
+    /// Options set specifically for this node.
     private(set) var options: [OptionKey: Config] = [:]
-    /// options set for the subtree given no options set for the node
+    /// Options set for the subtree, applicable when no options are set for the node itself.
     private var subtreeOptions: [OptionKey: Config] = [:]
+    /// The set of child nodes.
     private(set) var children: Set<NodeConfig>
 
-    // Strongly-typed accessors for each option
+    // Property accessors for each option which use the `options` set for the current node
+    // and fall back to subtree options.
     var wildcardMatch: Config {
         get { options[.wildcardMatch] ?? subtreeOptions[.wildcardMatch]! }
         set { options[.wildcardMatch] = newValue }
@@ -143,8 +180,11 @@ public class NodeConfig: Hashable {
         set { options[.primitiveExactMatch] = newValue }
     }
     
-    // TODO: implement default values checks for each option
-    // better param strictness based on usage expectation
+    /// Creates a new node with the given values.
+    ///
+    /// Make sure to specify **all** OptionKey values for subtreeOptions, especially when the node is intended to be the root.
+    /// These subtree options will be used for all descendants unless otherwise specified. If any subtree option keys are missing, a
+    /// default value will be provided.
     init(name: String?,
          options: [OptionKey: Config] = [:],
          subtreeOptions: [OptionKey: Config],
@@ -170,22 +210,28 @@ public class NodeConfig: Hashable {
         // Define equality based on properties of NodeConfig
         return lhs.name == rhs.name &&
                lhs.options == rhs.options &&
-               lhs.subtreeOptions == rhs.subtreeOptions &&
-               lhs.children == rhs.children
+               lhs.subtreeOptions == rhs.subtreeOptions
     }
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(name)
         hasher.combine(options)
         hasher.combine(subtreeOptions)
-        hasher.combine(children)
     }
     
     func getChild(named name: String?) -> NodeConfig? {
         return children.first(where: { $0.name == name })
     }
     
-    static func resolveOption(_ option: OptionKey, for node: NodeConfig?, parent parentNode: NodeConfig) -> NodeConfig.Config {
+    /// Resolves a given node's option using the following precedence:
+    /// 1. Node's own node-specific option
+    /// 2. Parent node's node-specific option
+    /// 3. Node's subtree default option
+    /// 4. Parent node's subtree default option
+    ///
+    /// This is to handle the case where an array has a node-specific option like wildcard match which should apply to all direct children
+    /// (that is, only 1 level down), and one of the children has a node specific option disabling wildcard match.
+    static func resolveOption(_ option: OptionKey, for node: NodeConfig?, parent parentNode: NodeConfig) -> Config {
         // Check node's node-specific option
         if let nodeOption = node?.options[option] {
             return nodeOption
@@ -225,11 +271,10 @@ public class NodeConfig: Hashable {
             if let existingChild = current.children.first(where: { $0.name == name }) {
                 child = existingChild
             } else {
-                let newChild = NodeConfig(name: name)
+                // Apply subtreeOptions to the child
+                let newChild = NodeConfig(name: name, subtreeOptions: current.subtreeOptions)
                 current.children.insert(newChild)
                 child = newChild
-                // Apply subtreeOptions to the child
-                child.subtreeOptions = current.subtreeOptions
             }
             return child
         }
