@@ -21,6 +21,9 @@ public protocol AnyCodableAsserts {
 
     /// Gets an event's data payload converted into `AnyCodable` format
     func getAnyCodable(_ event: Event) -> AnyCodable?
+    
+    /// Converts a network request's connect payload into `AnyCodable` format.
+    func getAnyCodable(_ networkRequest: NetworkRequest) -> AnyCodable?
 
     /// Asserts exact equality between two `AnyCodable` instances.
     ///
@@ -77,7 +80,8 @@ public protocol AnyCodableAsserts {
     ///   - exactMatchPaths: The key paths in the expected JSON that should use exact matching mode, where values require both the same type and literal value.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
-    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, exactMatchPaths: [String], file: StaticString, line: UInt)
+    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: [MultiPathConfig], file: StaticString, line: UInt)
+    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: MultiPathConfig..., file: StaticString, line: UInt)
 
     /// Performs a flexible JSON comparison where only the key-value pairs from the expected JSON are required.
     /// By default, the function uses exact match mode, validating that both values are of the same type
@@ -123,7 +127,8 @@ public protocol AnyCodableAsserts {
     ///   - typeMatchPaths: The key paths in the expected JSON that should use type matching mode, where values require only the same type (and are non-nil if the expected value is not nil).
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
-    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, typeMatchPaths: [String], file: StaticString, line: UInt)
+    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: [MultiPathConfig], file: StaticString, line: UInt)
+    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: MultiPathConfig..., file: StaticString, line: UInt)
 }
 
 public extension AnyCodableAsserts where Self: XCTestCase {
@@ -134,21 +139,45 @@ public extension AnyCodableAsserts where Self: XCTestCase {
     func getAnyCodable(_ event: Event) -> AnyCodable? {
         return AnyCodable(AnyCodable.from(dictionary: event.data))
     }
+    
+    func getAnyCodable(_ networkRequest: NetworkRequest) -> AnyCodable? {
+        guard let payloadAsDictionary = try? JSONSerialization.jsonObject(with: networkRequest.connectPayload, options: []) as? [String: Any] else {
+            return nil
+        }
+        return AnyCodable(AnyCodable.from(dictionary: payloadAsDictionary))
+    }
 
     func assertEqual(expected: AnyCodable?, actual: AnyCodable?, file: StaticString = #file, line: UInt = #line) {
         assertEqual(expected: expected, actual: actual, keyPath: [], file: file, line: line)
     }
 
-    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, exactMatchPaths: [String] = [], file: StaticString = #file, line: UInt = #line) {
-        let pathTree = generatePathTree(paths: exactMatchPaths, file: file, line: line)
-        assertFlexibleEqual(expected: expected, actual: actual, pathTree: pathTree, exactMatchMode: false, file: file, line: line)
+    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: [MultiPathConfig] = [], file: StaticString = #file, line: UInt = #line) {
+        let treeDefaults: [MultiPathConfig] = [
+            WildcardMatch(paths: nil, isActive: false),
+            CollectionEqualCount(paths: nil, isActive: false),
+            ValueTypeMatch(paths: nil)]
+        
+        let nodeTree = generateNodeTree(pathOptions: pathOptions, treeDefaults: treeDefaults, file: file, line: line)
+        assertFlexibleEqual(expected: expected, actual: actual, nodeTree: nodeTree, file: file, line: line)
+    }
+    
+    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: MultiPathConfig..., file: StaticString = #file, line: UInt = #line) {
+        assertTypeMatch(expected: expected, actual: actual, pathOptions: pathOptions, file: file, line: line)
     }
 
-    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, typeMatchPaths: [String] = [], file: StaticString = #file, line: UInt = #line) {
-        let pathTree = generatePathTree(paths: typeMatchPaths, file: file, line: line)
-        assertFlexibleEqual(expected: expected, actual: actual, pathTree: pathTree, exactMatchMode: true, file: file, line: line)
+    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: [MultiPathConfig] = [], file: StaticString = #file, line: UInt = #line) {
+        let treeDefaults: [MultiPathConfig] = [
+            WildcardMatch(paths: nil, isActive: false),
+            CollectionEqualCount(paths: nil, isActive: false),
+            ValueExactMatch(paths: nil)]
+        
+        let nodeTree = generateNodeTree(pathOptions: pathOptions, treeDefaults: treeDefaults, file: file, line: line)
+        assertFlexibleEqual(expected: expected, actual: actual, nodeTree: nodeTree, file: file, line: line)
     }
 
+    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: MultiPathConfig..., file: StaticString = #file, line: UInt = #line) {
+        assertExactMatch(expected: expected, actual: actual, pathOptions: pathOptions, file: file, line: line)
+    }
     // MARK: - AnyCodable exact equivalence helpers
     /// Compares the given `expected` and `actual` values for exact equality. If they are not equal and an assertion fails,
     /// a test failure occurs.
@@ -306,26 +335,25 @@ public extension AnyCodableAsserts where Self: XCTestCase {
     /// Performs a flexible comparison between the given `expected` and `actual` values, optionally using exact match
     /// or value type match modes. In case of a mismatch and if `shouldAssert` is `true`, a test failure occurs.
     ///
-    /// It allows for customized matching behavior through the `pathTree` and `exactMatchMode` parameters.
+    /// It allows for customized matching behavior through the `exactMatchPathTree` and `exactMatchMode` parameters.
     ///
     /// - Parameters:
     ///   - expected: The expected value to compare.
     ///   - actual: The actual value to compare.
     ///   - keyPath: A list of keys or array indexes representing the path to the current value being compared. Defaults to an empty list.
-    ///   - pathTree: A map representing specific paths within the JSON structure that should be compared using the alternate mode.
+    ///   - exactMatchPathTree: A map representing specific paths within the JSON structure that should be compared using the alternate mode.
     ///   - exactMatchMode: If `true`, performs an exact match comparison; otherwise, uses value type matching.
     ///   - shouldAssert: Indicates if an assertion error should be thrown if `expected` and `actual` are not equal. Defaults to `true`.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
     ///
-    /// - Returns: `true` if `expected` and `actual` are equal based on the matching mode and the `pathTree`, otherwise returns `false`.
+    /// - Returns: `true` if `expected` and `actual` are equal based on the matching mode and the `exactMatchPathTree`, otherwise returns `false`.
     @discardableResult
     private func assertFlexibleEqual(
         expected: AnyCodable?,
         actual: AnyCodable?,
         keyPath: [Any] = [],
-        pathTree: [String: Any]?,
-        exactMatchMode: Bool,
+        nodeTree: NodeConfig,
         shouldAssert: Bool = true,
         file: StaticString = #file,
         line: UInt = #line) -> Bool {
@@ -355,7 +383,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
         case let (expected, actual) where (expected.value is Int && actual.value is Int):
             fallthrough
         case let (expected, actual) where (expected.value is Double && actual.value is Double):
-            if exactMatchMode {
+            if nodeTree.primitiveExactMatch.isActive {
                 if shouldAssert {
                     XCTAssertEqual(expected, actual, "Key path: \(keyPathAsString(keyPath))", file: file, line: line)
                 }
@@ -369,8 +397,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
                 expected: expected.value as? [String: AnyCodable],
                 actual: actual.value as? [String: AnyCodable],
                 keyPath: keyPath,
-                pathTree: pathTree,
-                exactMatchMode: exactMatchMode,
+                nodeTree: nodeTree,
                 shouldAssert: shouldAssert,
                 file: file,
                 line: line)
@@ -379,8 +406,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
                 expected: expected.value as? [AnyCodable],
                 actual: actual.value as? [AnyCodable],
                 keyPath: keyPath,
-                pathTree: pathTree,
-                exactMatchMode: exactMatchMode,
+                nodeTree: nodeTree,
                 shouldAssert: shouldAssert,
                 file: file,
                 line: line)
@@ -389,8 +415,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
                 expected: AnyCodable.from(array: expected.value as? [Any?]),
                 actual: AnyCodable.from(array: actual.value as? [Any?]),
                 keyPath: keyPath,
-                pathTree: pathTree,
-                exactMatchMode: exactMatchMode,
+                nodeTree: nodeTree,
                 shouldAssert: shouldAssert,
                 file: file,
                 line: line)
@@ -399,8 +424,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
                 expected: AnyCodable.from(dictionary: expected.value as? [String: Any?]),
                 actual: AnyCodable.from(dictionary: actual.value as? [String: Any?]),
                 keyPath: keyPath,
-                pathTree: pathTree,
-                exactMatchMode: exactMatchMode,
+                nodeTree: nodeTree,
                 shouldAssert: shouldAssert,
                 file: file,
                 line: line)
@@ -423,28 +447,28 @@ public extension AnyCodableAsserts where Self: XCTestCase {
     /// Performs a flexible comparison between the given `expected` and `actual` arrays of `AnyCodable`, optionally using exact match
     /// or value type match modes. In case of a mismatch and if `shouldAssert` is `true`, a test failure occurs.
     ///
-    /// It allows for customized matching behavior through the `pathTree` and `exactMatchMode` parameters.
+    /// It allows for customized matching behavior through the `exactMatchPathTree` and `exactMatchMode` parameters.
     ///
     /// - Parameters:
     ///   - expected: The expected array of `AnyCodable` to compare.
     ///   - actual: The actual array of `AnyCodable` to compare.
     ///   - keyPath: A list of keys or array indexes representing the path to the current value being compared.
-    ///   - pathTree: A map representing specific paths within the JSON structure that should be compared using the alternate mode.
+    ///   - exactMatchPathTree: A map representing specific paths within the JSON structure that should be compared using the alternate mode.
     ///   - exactMatchMode: If `true`, performs an exact match comparison; otherwise, uses value type matching.
     ///   - shouldAssert: Indicates if an assertion error should be thrown if `expected` and `actual` are not equal.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
     ///
-    /// - Returns: `true` if `expected` and `actual` are equal based on the matching mode and the `pathTree`, otherwise returns `false`.
+    /// - Returns: `true` if `expected` and `actual` are equal based on the matching mode and the `exactMatchPathTree`, otherwise returns `false`.
     private func assertFlexibleEqual(
         expected: [AnyCodable]?,
         actual: [AnyCodable]?,
         keyPath: [Any],
-        pathTree: [String: Any]?,
-        exactMatchMode: Bool,
+        nodeTree: NodeConfig,
         shouldAssert: Bool = true,
         file: StaticString = #file,
-        line: UInt = #line) -> Bool {
+        line: UInt = #line) -> Bool 
+    {
         if expected == nil {
             return true
         }
@@ -462,10 +486,10 @@ public extension AnyCodableAsserts where Self: XCTestCase {
             }
             return false
         }
-        if expected.count > actual.count {
+        if nodeTree.collectionEqualCount.isActive ? (expected.count != actual.count) : (expected.count > actual.count) {
             if shouldAssert {
                 XCTFail(#"""
-                    Expected JSON has more elements than Actual JSON. Impossible for Actual to fulfill Expected requirements.
+                    Expected JSON \#(nodeTree.collectionEqualCount.isActive ? "count does not match" : "has more elements than") Actual JSON.
 
                     Expected count: \#(expected.count)
                     Actual count: \#(actual.count)
@@ -479,72 +503,70 @@ public extension AnyCodableAsserts where Self: XCTestCase {
             }
             return false
         }
-        var actualIndexes = Set(0..<actual.count)
-        var expectedIndexes = Set(0..<expected.count)
-        var wildcardIndexes: Set<Int>
-
-        // Collect all the keys from `pathTree` that either:
-        // 1. Mark the path end (where the value is a `String`), or
-        // 2. Contain the asterisk (*) character.
-        let pathEndKeys = pathTree?.filter { key, value in
-            value is String || key.contains("*")
-        }.keys.map({$0}) ?? []
-
-        // If general wildcard is present, it supersedes other paths
-        if pathEndKeys.contains("[*]") {
-            wildcardIndexes = Set(0..<expected.count)
-            expectedIndexes.removeAll()
-        } else {
-            let validWildcards = extractValidWildcardIndexes(pathEndKeys: pathEndKeys, file: file, line: line)
-            // Discard wildcard indexes that are out of bounds of the available expected indexes
-            let inBoundWildcards = expectedIndexes.intersection(validWildcards)
-            wildcardIndexes = inBoundWildcards
-            // Remove all wildcard indexes from the valid expected indexes, so assertions are not performed twice
-            expectedIndexes.subtract(wildcardIndexes)
+        
+        // get the set of all expected indexes
+        // resolve the effective option for wildcard matching
+        func resolveWildcardOption(for node: NodeConfig?, inArray arrayNodeConfig: NodeConfig) -> NodeConfig.Config {
+            // Check node's node-specific option
+            if let nodeOption = node?.options[.wildcardMatch] {
+                return nodeOption
+            }
+            // Check array's node-specific option
+            if let arrayOption = arrayNodeConfig.options[.wildcardMatch] {
+                return arrayOption
+            }
+            // Check node's subtree option, falling back to array node's default subtree config
+            return node?.wildcardMatch ?? arrayNodeConfig.wildcardMatch
         }
-
+        
+        // assert on non-wildcard ones first (both non-specified and specified)
+        // assert on wildcard ones
+        
+        var expectedIndexes = (0..<expected.count).reduce(into: [String: NodeConfig.Config]()) { result, index in
+            let indexString = String(index)
+            result[indexString] = NodeConfig.resolveOption(.wildcardMatch, for: nodeTree.getChild(named: indexString), parent: nodeTree)
+        }
+        let wildcardIndexes = expectedIndexes.filter({ $0.value.isActive })
+        wildcardIndexes.forEach { key, _ in
+            expectedIndexes.removeValue(forKey: key)
+        }
+        
+        var availableWildcardActualIndexes = Set((0..<actual.count).map({ String($0) })).subtracting(expectedIndexes.keys)
+        
         var finalResult = true
-
-        for index in expectedIndexes {
-            let pathTreeValue = pathTree?["[\(index)]"]
-            let isPathEnd = pathTreeValue is String
-
+        // Validate non-wildcard expected side indexes first, as these don't have
+        // position flexibility
+        for (index, config) in expectedIndexes {
+            let intIndex = Int(index)!
             finalResult = assertFlexibleEqual(
-                expected: expected[index],
-                actual: actual[index],
-                keyPath: keyPath + [index],
-                pathTree: pathTreeValue as? [String: Any],
-                exactMatchMode: isPathEnd != exactMatchMode,
+                expected: expected[intIndex],
+                actual: actual[intIndex],
+                keyPath: keyPath + [intIndex],
+                nodeTree: nodeTree.getChild(named: index) ?? nodeTree.asFinalNode(),
                 shouldAssert: shouldAssert,
                 file: file, line: line) && finalResult
-            actualIndexes.remove(index)
         }
+        
+        for (index, config) in wildcardIndexes {
+            let intIndex = Int(index)!
 
-        for index in wildcardIndexes {
-            let pathTreeValue = pathTree?["[*]"]
-                ?? pathTree?["[*\(index)]"]
-                ?? pathTree?["[\(index)*]"]
-
-            let isPathEnd = pathTreeValue is String
-
-            guard let actualIndex = actualIndexes.first(where: {
+            guard let actualIndex = availableWildcardActualIndexes.first(where: {
                 assertFlexibleEqual(
-                    expected: expected[index],
-                    actual: actual[$0],
-                    keyPath: keyPath + [index],
-                    pathTree: pathTreeValue as? [String: Any],
-                    exactMatchMode: isPathEnd != exactMatchMode,
+                    expected: expected[intIndex],
+                    actual: actual[Int($0)!],
+                    keyPath: keyPath + [intIndex],
+                    nodeTree: nodeTree.getChild(named: index) ?? nodeTree.asFinalNode(),
                     shouldAssert: false)
             }) else {
                 if shouldAssert {
                     XCTFail(#"""
-                        Wildcard \#((isPathEnd ? !exactMatchMode : exactMatchMode) ? "exact" : "type") match found no matches on Actual side satisfying the Expected requirement.
+                        Wildcard \#(NodeConfig.resolveOption(.primitiveExactMatch, for: nodeTree.getChild(named: index), parent: nodeTree).isActive ? "exact" : "type") match found no matches on Actual side satisfying the Expected requirement.
 
-                        Requirement: \#(String(describing: pathTreeValue))
+                        Requirement: \#(nodeTree)
 
-                        Expected: \#(expected[index])
+                        Expected: \#(expected[intIndex])
 
-                        Actual (remaining unmatched elements): \#(actualIndexes.map({ actual[$0] }))
+                        Actual (remaining unmatched elements): \#(availableWildcardActualIndexes.map({ actual[Int($0)!] }))
 
                         Key path: \#(keyPathAsString(keyPath))
                         """#, file: file, line: line)
@@ -552,36 +574,37 @@ public extension AnyCodableAsserts where Self: XCTestCase {
                 finalResult = false
                 break
             }
-            actualIndexes.remove(actualIndex)
+            availableWildcardActualIndexes.remove(actualIndex)
         }
+        
         return finalResult
     }
 
     /// Performs a flexible comparison between the given `expected` and `actual` dictionaries, optionally using exact match
     /// or value type match modes. In case of a mismatch and if `shouldAssert` is `true`, a test failure occurs.
     ///
-    /// It allows for customized matching behavior through the `pathTree` and `exactMatchMode` parameters.
+    /// It allows for customized matching behavior through the `exactMatchPathTree` and `exactMatchMode` parameters.
     ///
     /// - Parameters:
     ///   - expected: The expected dictionary of `AnyCodable` to compare.
     ///   - actual: The actual dictionary of `AnyCodable` to compare.
     ///   - keyPath: A list of keys or array indexes representing the path to the current value being compared.
-    ///   - pathTree: A map representing specific paths within the JSON structure that should be compared using the alternate mode.
+    ///   - exactMatchPathTree: A map representing specific paths within the JSON structure that should be compared using the alternate mode.
     ///   - exactMatchMode: If `true`, performs an exact match comparison; otherwise, uses value type matching.
     ///   - shouldAssert: Indicates if an assertion error should be thrown if `expected` and `actual` are not equal.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
     ///
-    /// - Returns: `true` if `expected` and `actual` are equal based on the matching mode and the `pathTree`, otherwise returns `false`.
+    /// - Returns: `true` if `expected` and `actual` are equal based on the matching mode and the `exactMatchPathTree`, otherwise returns `false`.
     private func assertFlexibleEqual(
         expected: [String: AnyCodable]?,
         actual: [String: AnyCodable]?,
         keyPath: [Any],
-        pathTree: [String: Any]?,
-        exactMatchMode: Bool,
+        nodeTree: NodeConfig,
         shouldAssert: Bool = true,
         file: StaticString = #file,
-        line: UInt = #line) -> Bool {
+        line: UInt = #line) -> Bool 
+    {
         if expected == nil {
             return true
         }
@@ -599,10 +622,10 @@ public extension AnyCodableAsserts where Self: XCTestCase {
             }
             return false
         }
-        if expected.count > actual.count {
+        if nodeTree.collectionEqualCount.isActive ? (expected.count != actual.count) : (expected.count > actual.count) {
             if shouldAssert {
                 XCTFail(#"""
-                    Expected JSON has more elements than Actual JSON.
+                    Expected JSON \#(nodeTree.collectionEqualCount.isActive ? "count does not match" : "has more elements than") Actual JSON.
 
                     Expected count: \#(expected.count)
                     Actual count: \#(actual.count)
@@ -618,15 +641,11 @@ public extension AnyCodableAsserts where Self: XCTestCase {
         }
         var finalResult = true
         for (key, value) in expected {
-            let pathTreeValue = pathTree?[key]
-            let isPathEnd = pathTreeValue is String
-
             finalResult = assertFlexibleEqual(
                 expected: value,
                 actual: actual[key],
                 keyPath: keyPath + [key],
-                pathTree: pathTreeValue as? [String: Any],
-                exactMatchMode: isPathEnd != exactMatchMode,
+                nodeTree: nodeTree.getChild(named: key) ?? nodeTree.asFinalNode(),
                 shouldAssert: shouldAssert,
                 file: file,
                 line: line)
@@ -636,282 +655,6 @@ public extension AnyCodableAsserts where Self: XCTestCase {
     }
 
     // MARK: - Test setup and output helpers
-
-    /// Extracts and returns a set of valid wildcard indexes.
-    ///
-    /// This method only considers keys that match the array access format (ex: `[*123]`).
-    /// It identifies wildcard indexes by:
-    /// 1. Filtering out index values that don't have the wildcard marker `*`.
-    /// 2. Strictly validating the following, and emitting a test failure if any check fails:
-    ///   i. Wildcard character must be placed on the left of the index value (that is, as the leftmost character in the array brackets).
-    ///   ii. The index value must be parsable as a valid `Int` once the wildcard character is removed.
-    ///
-    /// - Parameters:
-    ///   - pathEndKeys: An array of end keys which may contain potential wildcard indexes.
-    ///   - file: The file from which the method is called, used for localized assertion failures.
-    ///   - line: The line from which the method is called, used for localized assertion failures.
-    ///
-    /// - Returns: A set of valid wildcard `Int` indexes.
-    ///
-    /// - Note:
-    ///   Examples of conversions:
-    ///   - `[*123]` -> `123`
-    ///   - `[*ab12]` causes a test failure since "ab12" is not a valid integer.
-    ///   - `[0*]` causes a test failure since the wildcard character `*` is not the leftmost character.
-    private func extractValidWildcardIndexes(pathEndKeys: [String], file: StaticString = #file, line: UInt = #line) -> Set<Int> {
-        let arrayIndexValueRegex = #"^\[(.*?)\]$"#
-        let arrayIndexValues = Set(pathEndKeys
-                                    .flatMap { getCapturedRegexGroups(text: $0, regexPattern: arrayIndexValueRegex) })
-
-        let potentialWildcardIndexes = arrayIndexValues
-            .filter { $0.contains("*") }
-
-        var result: Set<Int> = []
-        for potentialWildcardIndex in potentialWildcardIndexes {
-            if potentialWildcardIndex.first != "*" {
-                XCTFail("TEST ERROR: wildcard indexes must have a single `*` character to the left of the index (ex: [*0])", file: file, line: line)
-                continue
-            }
-            let wildcardIndexString = potentialWildcardIndex.dropFirst()
-            guard let validWildcardIndex = Int(wildcardIndexString) else {
-                XCTFail("TEST ERROR: wildcard index is not a valid Int: \(wildcardIndexString)", file: file, line: line)
-                continue
-            }
-            result.insert(validWildcardIndex)
-        }
-        return result
-    }
-
-    /// Finds all matches of the `regexPattern` in the `text` and for each match, returns the original matched `String`
-    /// and its corresponding non-null capture groups.
-    ///
-    /// - Parameters:
-    ///   - text: The input `String` on which the regex matching is to be performed.
-    ///   - regexPattern: The regex pattern to be used for matching against the `text`.
-    ///
-    /// - Returns: An array of tuples, where each tuple consists of the original matched `String` and an array of its non-null capture groups. Returns `nil` if an invalid regex pattern is provided.
-    private func extractRegexCaptureGroups(text: String, regexPattern: String, file: StaticString = #file, line: UInt = #line) -> [(matchString: String, captureGroups: [String])]? {
-        do {
-            let regex = try NSRegularExpression(pattern: regexPattern)
-            let matches = regex.matches(in: text,
-                                        range: NSRange(text.startIndex..., in: text))
-            var matchResult: [(matchString: String, captureGroups: [String])] = []
-            for match in matches {
-                var rangeStrings: [String] = []
-                // [(matched string), (capture group 0), (capture group 1), etc.]
-                for rangeIndex in 0 ..< match.numberOfRanges {
-                    let rangeBounds = match.range(at: rangeIndex)
-                    guard let range = Range(rangeBounds, in: text) else {
-                        continue
-                    }
-                    rangeStrings.append(String(text[range]))
-                }
-                guard !rangeStrings.isEmpty else {
-                    continue
-                }
-                let matchString = rangeStrings.removeFirst()
-                matchResult.append((matchString: matchString, captureGroups: rangeStrings))
-            }
-            return matchResult
-        } catch let error {
-            XCTFail("TEST ERROR: Invalid regex: \(error.localizedDescription)", file: file, line: line)
-            return nil
-        }
-    }
-
-    /// Applies the provided regex pattern to the text and returns all the capture groups from the regex pattern
-    private func getCapturedRegexGroups(text: String, regexPattern: String, file: StaticString = #file, line: UInt = #line) -> [String] {
-
-        guard let captureGroups = extractRegexCaptureGroups(text: text, regexPattern: regexPattern, file: file, line: line)?.flatMap({ $0.captureGroups }) else {
-            return []
-        }
-
-        return captureGroups
-    }
-
-    /// Extracts and returns the components of a given key path string.
-    ///
-    /// The method is designed to handle key paths in a specific style such as "key0\.key1.key2[1][2].key3", which represents
-    /// a nested structure in JSON objects. The method captures each group separated by the `.` character and treats
-    /// the sequence "\." as a part of the key itself (that is, it ignores "\." as a nesting indicator).
-    ///
-    /// For example, the input "key0\.key1.key2[1][2].key3" would result in the output: ["key0\.key1", "key2[1][2]", "key3"].
-    ///
-    /// - Parameter text: The input key path string that needs to be split into its components.
-    ///
-    /// - Returns: An array of strings representing the individual components of the key path. If the input `text` is empty,
-    /// a list containing an empty string is returned. If no components are found, an empty list is returned.
-    func getKeyPathComponents(text: String) -> [String] {
-        // Handle edge case where input is empty
-        if text.isEmpty { return [""] }
-
-        var segments: [String] = []
-        var startIndex = text.startIndex
-        var inEscapeSequence = false
-
-        // Iterate over each character in the input string with its index
-        for (index, char) in text.enumerated() {
-            let currentIndex = text.index(text.startIndex, offsetBy: index)
-
-            // If current character is a backslash and we're not already in an escape sequence
-            if char == "\\" {
-                inEscapeSequence = true
-            }
-            // If current character is a dot and we're not in an escape sequence
-            else if char == "." && !inEscapeSequence {
-                // Add the segment from the start index to current index (excluding the dot)
-                segments.append(String(text[startIndex..<currentIndex]))
-
-                // Update the start index for the next segment
-                startIndex = text.index(after: currentIndex)
-            }
-            // Any other character or if we're ending an escape sequence
-            else {
-                inEscapeSequence = false
-            }
-        }
-
-        // Add the remaining segment after the last dot (if any)
-        segments.append(String(text[startIndex...]))
-
-        // Handle edge case where input ends with a dot (but not an escaped dot)
-        if text.hasSuffix(".") && !text.hasSuffix("\\.") && segments.last != "" {
-            segments.append("")
-        }
-
-        return segments
-    }
-
-    /// Merges two constructed key path dictionaries, replacing `current` values with `new` ones, with the exception
-    /// of existing values that are String types, which mean that it is a final key path from a different path string
-    /// Merge order doesn't matter, the final result should always be the same
-    ///
-    /// Merges two given dictionaries, with the values from the `new` map overwriting those from the `current` map,
-    /// unless the value in the `current` map is a `String`, which means it is the end of an existing path.
-    ///
-    /// If both the `current` and `new` dictionary have a value which is itself a dictionary for the same key,
-    /// the function will recursively merge these nested dictionaries.
-    ///
-    /// - Parameters:
-    ///   - current: The original dictionary that will be merged into.
-    ///   - new: The dictionary containing new values that will overwrite or be added to the `current` dictionary.
-    ///
-    /// - Returns: The merged dictionary, which is the result of the `current` map after merging.
-
-    private func merge(current: [String: Any], new: [String: Any]) -> [String: Any] {
-        var current = current
-        for (key, newValue) in new {
-            let currentValue = current[key]
-            switch (currentValue, newValue) {
-            case let (currentValue as [String: Any], newValue as [String: Any]):
-                current[key] = merge(current: currentValue, new: newValue)
-            default:
-                if current[key] is String {
-                    continue
-                }
-                current[key] = newValue
-            }
-        }
-        return current
-    }
-
-    /// Constructs a nested dictionary structure based on the provided path, with the deepest nested key pointing to the given `pathString`.
-    ///
-    /// For instance, given a path of `["a", "b", "c"]` and a `pathString` of `"a.b.c"`, the resulting dictionary would be:
-    /// `{"a": {"b": {"c": "a.b.c"}}}`.
-    ///
-    /// - Parameters:
-    ///   - path: An array of strings representing the sequence of nested keys for the dictionary structure.
-    ///   - pathString: The `String` value that will be associated with the deepest nested key in the constructed dictionary.
-    ///
-    /// - Returns: A dictionary representing the nested structure constructed from the `path`, with the deepest nested key having the value `pathString`.
-    private func construct(path: [String], pathString: String) -> [String: Any] {
-        guard !path.isEmpty else {
-            return [:]
-        }
-        var path = path
-        let first = path.removeFirst()
-        let result: [String: Any]
-        if path.isEmpty {
-            result = [first: pathString]
-            return result
-        } else {
-
-            return [first: construct(path: path, pathString: pathString)]
-        }
-    }
-
-    /// Extracts valid array format access components from a given path component and returns the separated components.
-    ///
-    /// Given `"key1[0][1]"`, the result is `["key1", "[0]", "[1]"]`.
-    /// Array format access can be escaped using a backslash character preceding an array bracket. Valid bracket escape sequences are cleaned so
-    /// that the final path component does not have the escape character.
-    /// For example: `"key1\[0\]"` results in the single path component `"key1[0]"`.
-    ///
-    /// - Parameter pathComponent: The path component to be split into separate components given valid array formatted components.
-    ///
-    /// - Returns: An array of `String` path components, where the original path component is divided into individual elements. Valid array format
-    ///  components in the original path are extracted as distinct elements, in order. If there are no array format components, the array contains only
-    ///  the original path component.
-    func extractArrayFormattedComponents(pathComponent: String) -> [String] {
-        // Handle edge case where input is empty
-        if pathComponent.isEmpty { return [""] }
-
-        var components: [String] = []
-        var bracketCount = 0
-        var componentBuilder = ""
-        var nextCharIsBackslash = false
-        var lastArrayAccessEnd = pathComponent.endIndex // to track the end of the last valid array-style access
-
-        func isNextCharBackslash(i: String.Index) -> Bool {
-            if i == pathComponent.startIndex {
-                // There is no character before the startIndex.
-                return false
-            }
-
-            // Since we're iterating in reverse, the "next" character is before i
-            let previousIndex = pathComponent.index(before: i)
-            return pathComponent[previousIndex] == "\\"
-        }
-
-        outerLoop: for i in pathComponent.indices.reversed() {
-            switch pathComponent[i] {
-            case "]" where !isNextCharBackslash(i: i):
-                bracketCount += 1
-                componentBuilder.append("]")
-            case "[" where !isNextCharBackslash(i: i):
-                bracketCount -= 1
-                componentBuilder.append("[")
-                if bracketCount == 0 {
-                    components.insert(String(componentBuilder.reversed()), at: 0)
-                    componentBuilder = ""
-                    lastArrayAccessEnd = i
-                }
-            case "\\":
-                if nextCharIsBackslash {
-                    nextCharIsBackslash = false
-                    continue outerLoop
-                } else {
-                    componentBuilder.append("\\")
-                }
-            default:
-                if bracketCount == 0 && i < lastArrayAccessEnd {
-                    components.insert(String(pathComponent[pathComponent.startIndex...i]), at: 0)
-                    break outerLoop
-                }
-                componentBuilder.append(pathComponent[i])
-            }
-        }
-
-        // Add any remaining component that's not yet added
-        if !componentBuilder.isEmpty {
-            components.insert(String(componentBuilder.reversed()), at: 0)
-        }
-        if !components.isEmpty {
-            components[0] = components[0].replacingOccurrences(of: "\\[", with: "[").replacingOccurrences(of: "\\]", with: "]")
-        }
-        return components
-    }
 
     /// Generates a tree structure from an array of path `String`s.
     ///
@@ -924,26 +667,27 @@ public extension AnyCodableAsserts where Self: XCTestCase {
     ///
     /// - Returns: A tree-like dictionary structure representing the nested structure of the provided paths. Returns `nil` if the
     /// resulting tree is empty.
-    private func generatePathTree(paths: [String], file: StaticString = #file, line: UInt = #line) -> [String: Any]? {
-        var tree: [String: Any] = [:]
-
-        for path in paths {
-            var allPathComponents: [String] = []
-
-            // Break the path string into its component parts
-            let keyPathComponents = getKeyPathComponents(text: path)
-            for pathComponent in keyPathComponents {
-                let pathComponent = pathComponent.replacingOccurrences(of: "\\.", with: ".")
-
-                let components = extractArrayFormattedComponents(pathComponent: pathComponent)
-                allPathComponents.append(contentsOf: components)
-            }
-
-            let constructedTree = construct(path: allPathComponents, pathString: path)
-            tree = merge(current: tree, new: constructedTree)
-
+    private func generateNodeTree(pathOptions: [MultiPathConfig], treeDefaults: [MultiPathConfig], file: StaticString = #file, line: UInt = #line) -> NodeConfig {
+        // 1. creates the first node using the incoming defaults
+        // using the first node it passes the path to the node to create the child nodes and just loops through all the paths passing them
+        
+        // Root node doesn't have a name
+        // also has the responsibility of setting the defaults for the tree
+        // TODO: update the isActive defaults to be passed from the initial caller
+        var subtreeOptions: [NodeConfig.OptionKey: NodeConfig.Config] = [:]
+        for treeDefault in treeDefaults {
+            let key = treeDefault.optionKey
+            let config = NodeConfig.Config(isActive: treeDefault.isActive)
+            subtreeOptions[key] = config
         }
-        return tree.isEmpty ? nil : tree
+        
+        let rootNode = NodeConfig(name: nil, subtreeOptions: subtreeOptions)
+
+        for pathConfig in pathOptions {
+            rootNode.createOrUpdateNode(using: pathConfig)
+        }
+        
+        return rootNode
     }
 
     /// Converts a key path represented by an array of JSON object keys and array indexes into a human-readable `String` format.
