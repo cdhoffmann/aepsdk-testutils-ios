@@ -22,6 +22,8 @@ public class RealNetworkService: NetworkService {
         super.init()
     }
 
+    public override init() {}
+
     public override func connectAsync(networkRequest: NetworkRequest, completionHandler: ((HttpConnection) -> Void)? = nil) {
         helper.recordSentNetworkRequest(networkRequest)
         super.connectAsync(networkRequest: networkRequest, completionHandler: { (connection: HttpConnection) in
