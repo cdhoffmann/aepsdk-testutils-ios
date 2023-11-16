@@ -17,10 +17,8 @@ import XCTest
 /// Overriding NetworkService used for tests that require real outgoing network requests
 public class RealNetworkService: NetworkService {
     private let helper: NetworkRequestHelper = NetworkRequestHelper()
-    
-    public override init() {
-        super.init()
-    }
+
+    public override init() {}
 
     public override func connectAsync(networkRequest: NetworkRequest, completionHandler: ((HttpConnection) -> Void)? = nil) {
         helper.recordSentNetworkRequest(networkRequest)
