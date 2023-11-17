@@ -15,7 +15,7 @@ import AEPTestUtils
 import Foundation
 import XCTest
 
-class AnyCodableAssertsParameterizedTests: XCTestCase {
+class AnyCodableAssertsParameterizedTests: XCTestCase, AnyCodableAsserts {
     func testValueMatching() {
         let rawCases: [(expected: Any, actual: Any)] = [
             (expected: 1, actual: 1),
