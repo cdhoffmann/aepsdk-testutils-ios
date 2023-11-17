@@ -80,6 +80,8 @@ public protocol AnyCodableAsserts {
     ///   - exactMatchPaths: The key paths in the expected JSON that should use exact matching mode, where values require both the same type and literal value.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
+    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, exactMatchPaths: [String], file: StaticString, line: UInt)
+    
     func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: [MultiPathConfig], file: StaticString, line: UInt)
     func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: MultiPathConfig..., file: StaticString, line: UInt)
 
@@ -127,6 +129,8 @@ public protocol AnyCodableAsserts {
     ///   - typeMatchPaths: The key paths in the expected JSON that should use type matching mode, where values require only the same type (and are non-nil if the expected value is not nil).
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
+    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, typeMatchPaths: [String], file: StaticString, line: UInt)
+    
     func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: [MultiPathConfig], file: StaticString, line: UInt)
     func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: MultiPathConfig..., file: StaticString, line: UInt)
 }
@@ -177,21 +181,26 @@ public extension AnyCodableAsserts where Self: XCTestCase {
             ValueTypeMatch(paths: nil)]
         
         let nodeTree = generateNodeTree(pathOptions: pathOptions, treeDefaults: treeDefaults, file: file, line: line)
-        assertFlexibleEqual(expected: expected, actual: actual, nodeTree: nodeTree, file: file, line: line)
+        validateJSON(expected: expected, actual: actual, nodeTree: nodeTree, file: file, line: line)
     }
     
     func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: MultiPathConfig..., file: StaticString = #file, line: UInt = #line) {
         assertTypeMatch(expected: expected, actual: actual, pathOptions: pathOptions, file: file, line: line)
     }
 
-    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: [MultiPathConfig] = [], file: StaticString = #file, line: UInt = #line) {
+    // MARK: Exact match
+    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, typeMatchPaths: [String] = [], file: StaticString = #file, line: UInt = #line) {
+        assertExactMatch(expected: expected, actual: actual, pathOptions: ValueTypeMatch(paths: typeMatchPaths, scope: .subtree), file: file, line: line)
+    }
+    
+    func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: [MultiPathConfig], file: StaticString = #file, line: UInt = #line) {
         let treeDefaults: [MultiPathConfig] = [
             WildcardMatch(paths: nil, isActive: false),
             CollectionEqualCount(paths: nil, isActive: false),
             ValueExactMatch(paths: nil)]
         
         let nodeTree = generateNodeTree(pathOptions: pathOptions, treeDefaults: treeDefaults, file: file, line: line)
-        assertFlexibleEqual(expected: expected, actual: actual, nodeTree: nodeTree, file: file, line: line)
+        validateJSON(expected: expected, actual: actual, nodeTree: nodeTree, file: file, line: line)
     }
 
     func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: MultiPathConfig..., file: StaticString = #file, line: UInt = #line) {
@@ -206,15 +215,14 @@ public extension AnyCodableAsserts where Self: XCTestCase {
     ///   - expected: The expected value to compare.
     ///   - actual: The actual value to compare.
     ///   - keyPath: A list of keys or array indexes representing the path to the current value being compared. Defaults to an empty list.
-    ///   - exactMatchPathTree: A map representing specific paths within the JSON structure that should be compared using the alternate mode.
-    ///   - exactMatchMode: If `true`, performs an exact match comparison; otherwise, uses value type matching.
+    ///   - nodeTree: A tree of configuration objects used to control various validation settings.
     ///   - shouldAssert: Indicates if an assertion error should be thrown if `expected` and `actual` are not equal. Defaults to `true`.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
     ///
-    /// - Returns: `true` if `expected` and `actual` are equal based on the matching mode and the `exactMatchPathTree`, otherwise returns `false`.
+    /// - Returns: `true` if `expected` and `actual` are equal based on the settings in `nodeTree`, otherwise returns `false`.
     @discardableResult
-    private func assertFlexibleEqual(
+    private func validateJSON(
         expected: AnyCodable?,
         actual: AnyCodable?,
         keyPath: [Any] = [],
@@ -258,7 +266,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
                 return true
             }
         case let (expected, actual) where (expected.value is [String: AnyCodable] && actual.value is [String: AnyCodable]):
-            return assertFlexibleEqual(
+            return validateJSON(
                 expected: expected.value as? [String: AnyCodable],
                 actual: actual.value as? [String: AnyCodable],
                 keyPath: keyPath,
@@ -267,7 +275,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
                 file: file,
                 line: line)
         case let (expected, actual) where (expected.value is [AnyCodable] && actual.value is [AnyCodable]):
-            return assertFlexibleEqual(
+            return validateJSON(
                 expected: expected.value as? [AnyCodable],
                 actual: actual.value as? [AnyCodable],
                 keyPath: keyPath,
@@ -276,7 +284,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
                 file: file,
                 line: line)
         case let (expected, actual) where (expected.value is [Any?] && actual.value is [Any?]):
-            return assertFlexibleEqual(
+            return validateJSON(
                 expected: AnyCodable.from(array: expected.value as? [Any?]),
                 actual: AnyCodable.from(array: actual.value as? [Any?]),
                 keyPath: keyPath,
@@ -285,7 +293,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
                 file: file,
                 line: line)
         case let (expected, actual) where (expected.value is [String: Any?] && actual.value is [String: Any?]):
-            return assertFlexibleEqual(
+            return validateJSON(
                 expected: AnyCodable.from(dictionary: expected.value as? [String: Any?]),
                 actual: AnyCodable.from(dictionary: actual.value as? [String: Any?]),
                 keyPath: keyPath,
@@ -309,23 +317,20 @@ public extension AnyCodableAsserts where Self: XCTestCase {
         }
     }
 
-    /// Performs a flexible comparison between the given `expected` and `actual` arrays of `AnyCodable`, optionally using exact match
-    /// or value type match modes. In case of a mismatch and if `shouldAssert` is `true`, a test failure occurs.
-    ///
-    /// It allows for customized matching behavior through the `exactMatchPathTree` and `exactMatchMode` parameters.
+    /// Performs a cutomizable validation between the given `expected` and `actual` `AnyCodable`arrays, using the configured options.
+    /// In case of a validation failure **and** if `shouldAssert` is `true`, a test failure occurs.
     ///
     /// - Parameters:
     ///   - expected: The expected array of `AnyCodable` to compare.
     ///   - actual: The actual array of `AnyCodable` to compare.
     ///   - keyPath: A list of keys or array indexes representing the path to the current value being compared.
-    ///   - exactMatchPathTree: A map representing specific paths within the JSON structure that should be compared using the alternate mode.
-    ///   - exactMatchMode: If `true`, performs an exact match comparison; otherwise, uses value type matching.
+    ///   - nodeTree: A tree of configuration objects used to control various validation settings.
     ///   - shouldAssert: Indicates if an assertion error should be thrown if `expected` and `actual` are not equal.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
     ///
-    /// - Returns: `true` if `expected` and `actual` are equal based on the matching mode and the `exactMatchPathTree`, otherwise returns `false`.
-    private func assertFlexibleEqual(
+    /// - Returns: `true` if `expected` and `actual` are equal based on the settings in `nodeTree`, otherwise returns `false`.
+    private func validateJSON(
         expected: [AnyCodable]?,
         actual: [AnyCodable]?,
         keyPath: [Any],
@@ -369,24 +374,10 @@ public extension AnyCodableAsserts where Self: XCTestCase {
             return false
         }
         
-        // get the set of all expected indexes
-        // resolve the effective option for wildcard matching
-        func resolveWildcardOption(for node: NodeConfig?, inArray arrayNodeConfig: NodeConfig) -> NodeConfig.Config {
-            // Check node's node-specific option
-            if let nodeOption = node?.options[.wildcardMatch] {
-                return nodeOption
-            }
-            // Check array's node-specific option
-            if let arrayOption = arrayNodeConfig.options[.wildcardMatch] {
-                return arrayOption
-            }
-            // Check node's subtree option, falling back to array node's default subtree config
-            return node?.wildcardMatch ?? arrayNodeConfig.wildcardMatch
-        }
-        
-        // assert on non-wildcard ones first (both non-specified and specified)
-        // assert on wildcard ones
-        
+        // Create a dictionary where:
+        // key: the index in String format
+        // value: the resolved option for if wildcard matching should be used for the index
+        //   - see resolveOption for precedence
         var expectedIndexes = (0..<expected.count).reduce(into: [String: NodeConfig.Config]()) { result, index in
             let indexString = String(index)
             result[indexString] = NodeConfig.resolveOption(.wildcardMatch, for: nodeTree.getChild(named: indexString), parent: nodeTree)
@@ -403,7 +394,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
         // position flexibility
         for (index, config) in expectedIndexes {
             let intIndex = Int(index)!
-            finalResult = assertFlexibleEqual(
+            finalResult = validateJSON(
                 expected: expected[intIndex],
                 actual: actual[intIndex],
                 keyPath: keyPath + [intIndex],
@@ -416,7 +407,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
             let intIndex = Int(index)!
 
             guard let actualIndex = availableWildcardActualIndexes.first(where: {
-                assertFlexibleEqual(
+                validateJSON(
                     expected: expected[intIndex],
                     actual: actual[Int($0)!],
                     keyPath: keyPath + [intIndex],
@@ -445,23 +436,20 @@ public extension AnyCodableAsserts where Self: XCTestCase {
         return finalResult
     }
 
-    /// Performs a flexible comparison between the given `expected` and `actual` dictionaries, optionally using exact match
-    /// or value type match modes. In case of a mismatch and if `shouldAssert` is `true`, a test failure occurs.
-    ///
-    /// It allows for customized matching behavior through the `exactMatchPathTree` and `exactMatchMode` parameters.
+    /// Performs a cutomizable validation between the given `expected` and `actual` `AnyCodable`dictionaries, using the configured options.
+    /// In case of a validation failure **and** if `shouldAssert` is `true`, a test failure occurs.
     ///
     /// - Parameters:
     ///   - expected: The expected dictionary of `AnyCodable` to compare.
     ///   - actual: The actual dictionary of `AnyCodable` to compare.
     ///   - keyPath: A list of keys or array indexes representing the path to the current value being compared.
-    ///   - exactMatchPathTree: A map representing specific paths within the JSON structure that should be compared using the alternate mode.
-    ///   - exactMatchMode: If `true`, performs an exact match comparison; otherwise, uses value type matching.
+    ///   - nodeTree: A tree of configuration objects used to control various validation settings.
     ///   - shouldAssert: Indicates if an assertion error should be thrown if `expected` and `actual` are not equal.
     ///   - file: The file from which the method is called, used for localized assertion failures.
     ///   - line: The line from which the method is called, used for localized assertion failures.
     ///
-    /// - Returns: `true` if `expected` and `actual` are equal based on the matching mode and the `exactMatchPathTree`, otherwise returns `false`.
-    private func assertFlexibleEqual(
+    /// - Returns: `true` if `expected` and `actual` are equal based on the settings in `nodeTree`, otherwise returns `false`.
+    private func validateJSON(
         expected: [String: AnyCodable]?,
         actual: [String: AnyCodable]?,
         keyPath: [Any],
@@ -506,7 +494,7 @@ public extension AnyCodableAsserts where Self: XCTestCase {
         }
         var finalResult = true
         for (key, value) in expected {
-            finalResult = assertFlexibleEqual(
+            finalResult = validateJSON(
                 expected: value,
                 actual: actual[key],
                 keyPath: keyPath + [key],
@@ -536,9 +524,6 @@ public extension AnyCodableAsserts where Self: XCTestCase {
         // 1. creates the first node using the incoming defaults
         // using the first node it passes the path to the node to create the child nodes and just loops through all the paths passing them
         
-        // Root node doesn't have a name
-        // also has the responsibility of setting the defaults for the tree
-        // TODO: update the isActive defaults to be passed from the initial caller
         var subtreeOptions: [NodeConfig.OptionKey: NodeConfig.Config] = [:]
         for treeDefault in treeDefaults {
             let key = treeDefault.optionKey
