@@ -18,10 +18,6 @@ import XCTest
 public class RealNetworkService: NetworkService {
     private let helper: NetworkRequestHelper = NetworkRequestHelper()
     
-    public override init() {
-        super.init()
-    }
-
     public override init() {}
 
     public override func connectAsync(networkRequest: NetworkRequest, completionHandler: ((HttpConnection) -> Void)? = nil) {
