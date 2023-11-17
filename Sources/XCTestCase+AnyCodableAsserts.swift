@@ -147,11 +147,30 @@ public extension AnyCodableAsserts where Self: XCTestCase {
         return AnyCodable(AnyCodable.from(dictionary: payloadAsDictionary))
     }
 
+    // Exact equality is just a special case of exact match
     func assertEqual(expected: AnyCodable?, actual: AnyCodable?, file: StaticString = #file, line: UInt = #line) {
-        assertEqual(expected: expected, actual: actual, keyPath: [], file: file, line: line)
+        if expected == nil && actual == nil {
+            return
+        }
+        guard let expected = expected, let actual = actual else {
+            XCTFail(#"""
+                \#(expected == nil ? "Expected is nil" : "Actual is nil") and \#(expected == nil ? "Actual" : "Expected") is non-nil.
+
+                Expected: \#(String(describing: expected))
+
+                Actual: \#(String(describing: actual))
+            """#, file: file, line: line)
+            return
+        }
+        assertExactMatch(expected: expected, actual: actual, pathOptions: CollectionEqualCount(paths: nil, isActive: true, scope: .subtree), file: file, line: line)
     }
 
-    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: [MultiPathConfig] = [], file: StaticString = #file, line: UInt = #line) {
+    // MARK: Type match
+    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, exactMatchPaths: [String] = [], file: StaticString = #file, line: UInt = #line) {
+        assertTypeMatch(expected: expected, actual: actual, pathOptions: ValueExactMatch(paths: exactMatchPaths, scope: .subtree), file: file, line: line)
+    }
+    
+    func assertTypeMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: [MultiPathConfig], file: StaticString = #file, line: UInt = #line) {
         let treeDefaults: [MultiPathConfig] = [
             WildcardMatch(paths: nil, isActive: false),
             CollectionEqualCount(paths: nil, isActive: false),
@@ -178,164 +197,10 @@ public extension AnyCodableAsserts where Self: XCTestCase {
     func assertExactMatch(expected: AnyCodable, actual: AnyCodable?, pathOptions: MultiPathConfig..., file: StaticString = #file, line: UInt = #line) {
         assertExactMatch(expected: expected, actual: actual, pathOptions: pathOptions, file: file, line: line)
     }
-    // MARK: - AnyCodable exact equivalence helpers
-    /// Compares the given `expected` and `actual` values for exact equality. If they are not equal and an assertion fails,
-    /// a test failure occurs.
-    ///
-    /// - Parameters:
-    ///   - expected: The expected value to compare.
-    ///   - actual: The actual value to compare.
-    ///   - keyPath: A list of keys indicating the path to the current value being compared. Defaults to an empty list.
-    ///   - file: The file from which the method is called, used for localized assertion failures.
-    ///   - line: The line from which the method is called, used for localized assertion failures.
-    private func assertEqual(expected: AnyCodable?, actual: AnyCodable?, keyPath: [Any] = [], file: StaticString = #file, line: UInt = #line) {
-        if expected?.value == nil, actual?.value == nil {
-            return
-        }
-        guard let expected = expected, let actual = actual else {
-            XCTFail(#"""
-                \#(expected == nil ? "Expected is nil" : "Actual is nil") and \#(expected == nil ? "Actual" : "Expected") is non-nil.
-
-                Expected: \#(String(describing: expected))
-
-                Actual: \#(String(describing: actual))
-
-                Key path: \#(keyPathAsString(keyPath))
-            """#, file: file, line: line)
-            return
-        }
-
-        switch (expected.value, actual.value) {
-        case let (expected as String, actual as String):
-            XCTAssertEqual(expected, actual, "Key path: \(keyPathAsString(keyPath))", file: file, line: line)
-        case let (expected as Bool, actual as Bool):
-            XCTAssertEqual(expected, actual, "Key path: \(keyPathAsString(keyPath))", file: file, line: line)
-        case let (expected as Int, actual as Int):
-            XCTAssertEqual(expected, actual, "Key path: \(keyPathAsString(keyPath))", file: file, line: line)
-        case let (expected as Double, actual as Double):
-            XCTAssertEqual(expected, actual, "Key path: \(keyPathAsString(keyPath))", file: file, line: line)
-        case let (expected as [String: AnyCodable], actual as [String: AnyCodable]):
-            assertEqual(expected: expected, actual: actual, keyPath: keyPath, file: file, line: line)
-        case let (expected as [AnyCodable], actual as [AnyCodable]):
-            assertEqual(expected: expected, actual: actual, keyPath: keyPath, file: file, line: line)
-        case let (expected as [Any?], actual as [Any?]):
-            assertEqual(expected: AnyCodable.from(array: expected), actual: AnyCodable.from(array: actual), keyPath: keyPath, file: file, line: line)
-        case let (expected as [String: Any?], actual as [String: Any?]):
-            assertEqual(expected: AnyCodable.from(dictionary: expected), actual: AnyCodable.from(dictionary: actual), keyPath: keyPath, file: file, line: line)
-        default:
-            XCTFail(#"""
-                Expected and Actual types do not match.
-
-                Expected: \#(expected)
-
-                Actual: \#(actual)
-
-                Key path: \#(keyPathAsString(keyPath))
-            """#, file: file, line: line)
-        }
-    }
-
-    /// Compares two `AnyCodable` arrays for exact equality. If they are not equal, a test failure occurs.
-    ///
-    /// - Parameters:
-    ///   - expected: The expected array of `AnyCodable` to compare.
-    ///   - actual: The actual array of `AnyCodable` to compare.
-    ///   - keyPath: A list of keys or array indexes representing the path to the current value being compared.
-    ///   - file: The file from which the method is called, used for localized assertion failures.
-    ///   - line: The line from which the method is called, used for localized assertion failures.
-    private func assertEqual(expected: [AnyCodable]?, actual: [AnyCodable]?, keyPath: [Any], file: StaticString = #file, line: UInt = #line) {
-        if expected == nil, actual == nil {
-            return
-        }
-        guard let expected = expected, let actual = actual else {
-            XCTFail(#"""
-                \#(expected == nil ? "Expected is nil" : "Actual is nil") and \#(expected == nil ? "Actual" : "Expected") is non-nil.
-
-                Expected: \#(String(describing: expected))
-
-                Actual: \#(String(describing: actual))
-
-                Key path: \#(keyPathAsString(keyPath))
-            """#, file: file, line: line)
-            return
-        }
-        if expected.count != actual.count {
-            XCTFail(#"""
-                Expected and Actual counts do not match (exact equality).
-
-                Expected count: \#(expected.count)
-                Actual count: \#(actual.count)
-
-                Expected: \#(expected)
-
-                Actual: \#(actual)
-
-                Key path: \#(keyPathAsString(keyPath))
-            """#, file: file, line: line)
-            return
-        }
-        for (index, valueTuple) in zip(expected, actual).enumerated() {
-            assertEqual(
-                expected: valueTuple.0,
-                actual: valueTuple.1,
-                keyPath: keyPath + [index],
-                file: file, line: line)
-        }
-    }
-
-    /// Compares two dictionaries (`[String: AnyCodable]`) for exact equality. If they are not equal, a test failure occurs.
-    ///
-    /// - Parameters:
-    ///   - expected: The expected dictionary of `AnyCodable` to compare.
-    ///   - actual: The actual dictionary of `AnyCodable` to compare.
-    ///   - keyPath: A list of keys or array indexes representing the path to the current value being compared.
-    ///   - file: The file from which the method is called, used for localized assertion failures.
-    ///   - line: The line from which the method is called, used for localized assertion failures.
-    private func assertEqual(expected: [String: AnyCodable]?, actual: [String: AnyCodable]?, keyPath: [Any], file: StaticString = #file, line: UInt = #line) {
-        if expected == nil, actual == nil {
-            return
-        }
-        guard let expected = expected, let actual = actual else {
-            XCTFail(#"""
-                \#(expected == nil ? "Expected is nil" : "Actual is nil") and \#(expected == nil ? "Actual" : "Expected") is non-nil.
-
-                Expected: \#(String(describing: expected))
-
-                Actual: \#(String(describing: actual))
-
-                Key path: \#(keyPathAsString(keyPath))
-            """#, file: file, line: line)
-            return
-        }
-        if expected.count != actual.count {
-            XCTFail(#"""
-                Expected and Actual counts do not match (exact equality).
-
-                Expected count: \#(expected.count)
-                Actual count: \#(actual.count)
-
-                Expected: \#(expected)
-
-                Actual: \#(actual)
-
-                Key path: \#(keyPathAsString(keyPath))
-            """#, file: file, line: line)
-            return
-        }
-        for (key, value) in expected {
-            assertEqual(
-                expected: value,
-                actual: actual[key],
-                keyPath: keyPath + [key],
-                file: file, line: line)
-        }
-    }
 
     // MARK: - AnyCodable flexible validation helpers
-    /// Performs a flexible comparison between the given `expected` and `actual` values, optionally using exact match
-    /// or value type match modes. In case of a mismatch and if `shouldAssert` is `true`, a test failure occurs.
-    ///
-    /// It allows for customized matching behavior through the `exactMatchPathTree` and `exactMatchMode` parameters.
+    /// Performs a cutomizable validation between the given `expected` and `actual` values, using the configured options.
+    /// In case of a validation failure **and** if `shouldAssert` is `true`, a test failure occurs.
     ///
     /// - Parameters:
     ///   - expected: The expected value to compare.
