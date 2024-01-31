@@ -12,7 +12,7 @@
 
 import AEPServices
 
-extension NamedCollectionDataStore {
+public extension NamedCollectionDataStore {
     /// Clears all known locations for Adobe Mobile SDK local device data persistence:
     /// 1. `UserDefaults` - tvOS (in use for all versions) and iOS (in use for Core version lower than v4.2.0) (see: ``UserDefaults/clearAll()``)
     /// 2. `FileManager` - hits databases for each extension (see: ``FileManager/clearCache``)
