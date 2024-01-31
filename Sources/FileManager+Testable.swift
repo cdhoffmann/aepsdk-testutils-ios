@@ -11,23 +11,41 @@
 //
 
 @testable import AEPServices
-import Foundation
 
 public extension FileManager {
-    func clearCache() {
-        let knownCacheItems: [String] = ["com.adobe.edge", "com.adobe.edge.identity", "com.adobe.edge.consent"]
+    /// Clears the cache for specified items within the application's cache directory. Ex: the event database for a given extension.
+    ///
+    /// This method removes cache items based on the provided list of cache item names and directory flags. If no list is provided,
+    /// a default set of cache items is used. This operation is intended to clear cached data related to specific extensions or
+    /// functionalities within an app, such as consent, identity, and disk caches. The method handles both file and directory types
+    /// of cache items.
+    ///
+    /// - Parameter cacheItems: An optional array of tuples where each tuple contains the `name` of the cache item (as a `String`)
+    ///   and a `Bool` indicating whether the cache item is a directory (`true`) or a file (`false`). If `nil`, a default list of
+    ///   cache items is used.
+    func clearCache(_ cacheItems: [(name: String, isDirectory: Bool)]? = nil) {
+        let LOG_TAG = "FileManager"
+
+        // Use caller provided values, defaults otherwise.
+        let cacheItems = cacheItems ?? [(name: "com.adobe.edge", isDirectory: false),
+                                        (name: "com.adobe.edge.consent", isDirectory: false),
+                                        (name: "com.adobe.edge.identity", isDirectory: false),
+                                        (name: "com.adobe.eventHistory", isDirectory: false),
+                                        (name: "com.adobe.mobile.diskcache", isDirectory: true),
+                                        (name: "com.adobe.module.signal", isDirectory: false),]
         guard let url = self.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            Log.warning(label: LOG_TAG, "Unable to find valid cache directory path.")
             return
         }
 
-        for cacheItem in knownCacheItems {
+        for cacheItem in cacheItems {
             do {
-                try self.removeItem(at: URL(fileURLWithPath: "\(url.relativePath)/\(cacheItem)"))
+                try self.removeItem(at: URL(fileURLWithPath: "Library/Caches/\(cacheItem.name)", isDirectory: cacheItem.isDirectory))
                 if let dqService = ServiceProvider.shared.dataQueueService as? DataQueueService {
-                    _ = dqService.threadSafeDictionary.removeValue(forKey: cacheItem)
+                    _ = dqService.threadSafeDictionary.removeValue(forKey: cacheItem.name)
                 }
             } catch {
-                print("ERROR DESCRIPTION: \(error)")
+                Log.error(label: LOG_TAG, "Error removing cache item, with reason: \(error)")
             }
         }
     }
@@ -54,7 +72,7 @@ public extension FileManager {
         }
 
         guard let directoryUrl = directoryUrl else {
-            Log.error(label: LOG_TAG, "Could not compute the directory URL for removal.")
+            Log.error(label: LOG_TAG, "Could not compute the directory URL for \(directoryName) for removal.")
             return
         }
 
