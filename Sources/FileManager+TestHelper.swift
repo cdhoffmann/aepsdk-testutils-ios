@@ -27,20 +27,32 @@ public extension FileManager {
         let LOG_TAG = "FileManager"
 
         // Use caller provided values, defaults otherwise.
-        let cacheItems = cacheItems ?? [(name: "com.adobe.edge", isDirectory: false),
-                                        (name: "com.adobe.edge.consent", isDirectory: false),
-                                        (name: "com.adobe.edge.identity", isDirectory: false),
-                                        (name: "com.adobe.eventHistory", isDirectory: false),
-                                        (name: "com.adobe.mobile.diskcache", isDirectory: true),
-                                        (name: "com.adobe.module.signal", isDirectory: false) ]
-        guard let url = self.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+        let cacheItems = cacheItems ?? [
+            (name: "com.adobe.edge", isDirectory: false),
+            (name: "com.adobe.edge.consent", isDirectory: false),
+            (name: "com.adobe.edge.identity", isDirectory: false),
+            (name: "com.adobe.eventHistory", isDirectory: false),
+            (name: "com.adobe.mobile.diskcache", isDirectory: true),
+            (name: "com.adobe.module.signal", isDirectory: false),
+            (name: "com.adobe.module.identity", isDirectory: false)
+        ]
+        guard let cacheDirectoryURL = self.urls(for: .cachesDirectory, in: .userDomainMask).first else {
             Log.warning(label: LOG_TAG, "Unable to find valid cache directory path.")
             return
         }
 
         for cacheItem in cacheItems {
+            let cacheItemURL = cacheDirectoryURL.appendingPathComponent(cacheItem.name, isDirectory: cacheItem.isDirectory)
+            
+            // Debugging: Check if the cache item exists before attempting to remove it.
+            if FileManager.default.fileExists(atPath: cacheItemURL.path) {
+                Log.debug(label: LOG_TAG, "Cache item exists and will be removed: \(cacheItemURL.path)")
+            } else {
+                Log.debug(label: LOG_TAG, "Cache item does not exist and cannot be removed: \(cacheItemURL.path)")
+            }
+            
             do {
-                try self.removeItem(at: URL(fileURLWithPath: "\(url.relativePath)/\(cacheItem.name)", isDirectory: cacheItem.isDirectory))
+                try self.removeItem(at: cacheItemURL)
                 if let dqService = ServiceProvider.shared.dataQueueService as? DataQueueService {
                     _ = dqService.threadSafeDictionary.removeValue(forKey: cacheItem.name)
                 }
@@ -49,6 +61,7 @@ public extension FileManager {
             }
         }
     }
+    
 
     /// Removes the Adobe cache directory within the app's data storage (persistence) from the specified app group's container directory or in the default library directory
     /// if no app group is provided.
